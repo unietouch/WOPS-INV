@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FEFO Delivery Reservation System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 p-6 font-sans">
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">New Delivery Reservation</h2>
+            
+            <form id="reservationForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Sales Order (10 Digits)</label>
+                    <input type="text" id="salesOrder" maxlength="10" required class="w-full p-2 border rounded text-sm focus:outline-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Picklist (10 Digits)</label>
+                    <input type="text" id="picklist" maxlength="10" required class="w-full p-2 border rounded text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Required Delivery Date</label>
+                    <input type="date" id="reqDate" required class="w-full p-2 border rounded text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Customer</label>
+                    <select id="customerSelect" required class="w-full p-2 border rounded text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Material Code</label>
+                    <select id="materialSelect" required class="w-full p-2 border rounded text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Material Description</label>
+                    <input type="text" id="materialDesc" disabled class="w-full p-2 border rounded text-sm bg-gray-100 font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Qty</label>
+                    <input type="number" id="qty" min="0.01" step="any" required class="w-full p-2 border rounded text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Batch Code</label>
+                    <input type="text" id="batchCode" required class="w-full p-2 border rounded text-sm uppercase">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Computed Expiration Date</label>
+                    <input type="text" id="expDate" disabled class="w-full p-2 border rounded text-sm bg-gray-100">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Warehouse Order</label>
+                    <input type="text" id="whOrder" required class="w-full p-2 border rounded text-sm">
+                </div>
+                
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold p-2.5 rounded hover:bg-blue-700 transition">Save Transaction</button>
+            </form>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 flex flex-col">
+            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">Live FEFO Queue Preview</h2>
+            <div id="fefoDisplayPanel" class="flex-1 overflow-y-auto space-y-4 max-h-[650px] text-sm">
+                <p class="text-gray-400 italic">Select a Customer and Material to populate real-time queue states...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 1. CONFIGURE DATABASE CREDENTIALS (Find these keys in your Supabase Dashboard Settings -> API)
+        const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
+        const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // 2. REUSABLE VBA FORM TRANSLATION BATCH METHOD
+        function getExpirationFromBatch(batchCode) {
+            if (!batchCode) return "";
+            const batch = batchCode.trim().toUpperCase();
+            const prefixTwo = batch.substring(0, 2);
+            const prefixOne = batch.substring(0, 1);
+            const monthsMap = { JAN:1, FEB:2, MAR:3, APR:4, MAY:5, JUN:6, JUL:7, AUG:8, SEP:9, OCT:10, NOV:11, DEC:12 };
+
+            if (["BB", "LK", "LC", "TR", "DD", "IN"].includes(prefixTwo)) {
+                if (batch.length < 8) return "INVALID";
+                const m = batch.substring(2, 4);
+                const d = batch.substring(4, 6);
+                const y = "20" + batch.substring(6, 8);
+                return `${m}-${d}-${y}`;
+            }
+            if (["U", "C", "B", "E"].includes(prefixOne)) {
+                if (batch.length < 8) return "INVALID";
+                const d = batch.substring(1, 3);
+                const monthStr = batch.substring(3, 6);
+                const y = "20" + batch.substring(6, 8);
+                if (!monthsMap[monthStr]) return "INVALID";
+                const m = String(monthsMap[monthStr]).padStart(2, '0');
+                return `${m}-${d}-${y}`;
+            }
+            return batch; 
+        }
+
+        // 3. ATTACH REALTIME TRIGGERS
+        document.getElementById('batchCode').addEventListener('blur', function() {
+            const computed = getExpirationFromBatch(this.value);
+            document.getElementById('expDate').value = computed;
+        });
+
+        // Pulls dynamic data lookups on element changes
+        document.getElementById('customerSelect').addEventListener('change', fetchLiveFEFOData);
+        document.getElementById('materialSelect').addEventListener('change', async function() {
+            // Live map structural descriptions
+            const { data } = await supabase.from('materials').select('material_description').eq('material_code', this.value).maybeSingle();
+            document.getElementById('materialDesc').value = data ? data.material_description : "";
+            fetchLiveFEFOData();
+        });
+
+        // 4. LIVE RENDER HIGH INTENSITY FEFO VIEWER (Supports True Color Rows)
+        async function fetchLiveFEFOData() {
+            const cust = document.getElementById('customerSelect').value;
+            const mat = document.getElementById('materialSelect').value;
+            const panel = document.getElementById('fefoDisplayPanel');
+            if (!cust || !mat) return;
+
+            // Fetch all database entries for this combination
+            const { data: records, error } = await supabase.from('reservations').select(`
+                sales_order, batch_code, expiration_date, required_delivery_date, qty,
+                delivery_status ( status )
+            `).eq('customer', cust).eq('material_code', mat);
+
+            if (error || !records) return;
+
+            // Compute Baseline Delivered Expiry Threshold
+            let maxDeliveredExpiry = new Date(0);
+            let latestDelivered = null;
+            let undeliveredRows = [];
+
+            records.forEach(r => {
+                const status = (r.delivery_status?.status || "").toUpperCase();
+                const exp = new Date(r.expiration_date);
+                if (status === 'DELIVERED') {
+                    if (exp > maxDeliveredExpiry) {
+                        maxDeliveredExpiry = exp;
+                        latestDelivered = r;
+                    }
+                } else {
+                    undeliveredRows.push(r);
+                }
+            });
+
+            // Sort Undelivered Oldest Expiry First
+            undeliveredRows.sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date));
+
+            // Generate clean markup string rows with dynamic condition foreground font colors
+            let html = `<div class="p-3 bg-gray-50 border rounded font-mono">
+                <p class="font-bold text-gray-700">LATEST DELIVERED BASELINE</p>
+                ${latestDelivered ? 
+                    `<p class="text-gray-500">SO: ${latestDelivered.sales_order} | Batch: ${latestDelivered.batch_code} | Expiry: ${latestDelivered.expiration_date}</p>` : 
+                    `<p class="text-gray-400 italic">No historic base record deliveries found.</p>`}
+            </div>`;
+
+            html += `<h3 class="font-bold text-gray-700 mt-4">PENDING UNDELIVERED QUEUE</h3>`;
+            
+            if(undeliveredRows.length === 0) {
+                html += `<p class="text-gray-400 italic">No pending queues active.</p>`;
+            } else {
+                undeliveredRows.forEach(u => {
+                    const isViolation = latestDelivered && new Date(u.expiration_date) < maxDeliveredExpiry;
+                    // TRUE RED FOR VIOLATIONS, DARK GREEN FOR CLEAR PASS METRICS
+                    const rowColorClass = isViolation ? 'text-red-600 font-bold bg-red-50 border-red-200' : 'text-green-700 font-medium bg-green-50 border-green-200';
+                    const statusText = isViolation ? 'CRITICAL: FEFO VIOLATION' : 'OK';
+
+                    html += `<div class="p-2 border rounded font-mono ${rowColorClass}">
+                        <div class="flex justify-between">
+                            <span>SO: ${u.sales_order} | B: ${u.batch_code} | Exp: ${u.expiration_date}</span>
+                            <span class="text-xs uppercase px-1.5 py-0.5 rounded border">${statusText}</span>
+                        </div>
+                        <div class="text-xs opacity-80">RDD: ${u.required_delivery_date} | Qty: ${u.qty}</div>
+                    </div>`;
+                });
+            }
+
+            panel.innerHTML = html;
+        }
+
+        // 5. SECURE TRANSACTION INGESTION SAVE SUBMIT ENGINE
+        document.getElementById('reservationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const expField = document.getElementById('expDate').value;
+            if (expField === "INVALID" || !expField) {
+                alert("Please correct the batch string format before finalizing operations.");
+                return;
+            }
+
+            // Ingest to Supabase Postgres (Auto-Checks unique lines)
+            const { error } = await supabase.from('reservations').insert([{
+                sales_order: document.getElementById('salesOrder').value,
+                picklist_number: document.getElementById('picklist').value,
+                required_delivery_date: document.getElementById('reqDate').value,
+                customer: document.getElementById('customerSelect').value,
+                material_code: document.getElementById('materialSelect').value,
+                qty: parseFloat(document.getElementById('qty').value),
+                batch_code: document.getElementById('batchCode').value.toUpperCase(),
+                expiration_date: new Date(expField).toISOString().split('T')[0],
+                warehouse_order: document.getElementById('whOrder').value
+            }]);
+
+            if (error) {
+                // If PostgREST detects constraint violations it throws a 23505 code error
+                if (error.code === '23505') {
+                    alert("DUPLICATE TRANSACTION BLOCKED: An identical record line already exists with those parameters (SO + Material + Batch + Qty). Please revise.");
+                } else {
+                    alert("System infrastructure exception error: " + error.message);
+                }
+            } else {
+                alert("Transaction committed successfully.");
+                this.reset();
+                document.getElementById('expDate').value = "";
+                fetchLiveFEFOData();
+            }
+        });
+
+        // 6. INITIALIZE BOOTSTRAP MASTER LOADING LOOKUPS
+        async function initMasterData() {
+            let { data: mats } = await supabase.from('materials').select('*');
+            if (mats) {
+                const matSel = document.getElementById('materialSelect');
+                const custSel = document.getElementById('customerSelect');
+                const uniqueCusts = [...new Set(mats.map(m => m.customer_name))];
+                
+                // Populate Dropdowns dynamically
+                matSel.innerHTML = `<option value="">-- Choose Code --</option>` + mats.map(m => `<option value="${m.material_code}">${m.material_code}</option>`).join('');
+                custSel.innerHTML = `<option value="">-- Choose Customer --</option>` + uniqueCusts.map(c => `<option value="${c}">${c}</option>`).join('');
+            }
+        }
+        initMasterData();
+    </script>
+</body>
+</html>

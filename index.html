@@ -3,161 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivery Reservation Records System</title>
+    <title>Logistics Hub: Central Reservation Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-50 font-sans min-h-screen text-gray-800">
+<body class="bg-slate-50 font-sans min-h-screen text-slate-800">
 
-    <header class="bg-blue-700 text-white shadow-md px-6 py-4">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold tracking-tight">Logistics Hub: Delivery Reservations</h1>
-            <span class="text-sm bg-blue-800 px-3 py-1 rounded-full border border-blue-400 font-mono">Form Engine Stabilized</span>
+    <header class="bg-blue-800 text-white shadow-md px-6 py-4">
+        <div class="max-w-[1600px] mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Logistics Hub: Fulfillment Network</h1>
+                <p class="text-xs text-blue-200 mt-0.5">Enterprise Allocation & FEFO Validation Ledger</p>
+            </div>
+            <span class="text-sm bg-blue-900 px-3 py-1 rounded-full border border-blue-500 font-mono">V2.4 Stable Operational Engine</span>
         </div>
     </header>
 
-    <nav class="bg-white border-b border-gray-200 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 lg:px-8 flex gap-2">
-            <button id="tabBtnReservation" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-700">📝 Reservation Entry</button>
-            <button id="tabBtnMasterdel" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700">🔄 Update MasterDel</button>
+    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-40">
+        <div class="max-w-[1600px] mx-auto px-4 lg:px-8 flex flex-wrap gap-1">
+            <button id="tabBtnReservation" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-700 transition">📝 Reservation Entry</button>
+            <button id="tabBtnMasterdel" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">🔄 Update MasterDel</button>
+            <button id="tabBtnMasterDB" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">📦 MasterDB Materials</button>
+            <button id="tabBtnCustomerDB" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">🏢 CustomerDB Ledger</button>
+            <button id="tabBtnAllReservations" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">📋 All Reservation Logs</button>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto p-4 lg:p-8">
+    <main class="max-w-[1600px] mx-auto p-4 lg:p-8">
 
-        <!-- ===================== TAB 1: RESERVATION ENTRY ===================== -->
-        <div id="tabReservationView">
-
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
-                <h2 class="text-xl font-bold text-gray-900 border-b pb-3 mb-6">Reservation Record Entry</h2>
-
-                <form id="reservationForm" class="space-y-5" novalidate>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Date of Entry (Auto)</label>
-                            <input type="text" id="dateOfEntry" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-500 cursor-not-allowed" readonly>
+        <div id="tabReservationView" class="tab-content transition-all duration-150">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <div class="lg:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-900 border-b pb-3 mb-6">Reservation Record Entry</h2>
+                    <form id="reservationForm" class="space-y-5" novalidate>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Date of Entry (Auto)</label>
+                                <input type="text" id="dateOfEntry" class="w-full bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 text-slate-500 cursor-not-allowed" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Status (Auto lookup via Picklist)</label>
+                                <input type="text" id="status" class="w-full bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 font-bold text-slate-600 cursor-not-allowed" value="UNDELIVERED" readonly>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Status (Auto lookup via Picklist)</label>
-                            <input type="text" id="status" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 font-bold text-gray-600 cursor-not-allowed" value="UNDELIVERED" readonly>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Sales Order <span class="text-red-500">*</span></label>
+                                <input type="text" id="salesOrder" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <p id="salesOrderHint" class="text-xs mt-1 h-4"></p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Picklist <span class="text-red-500">*</span></label>
+                                <input type="text" id="picklist" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
                         </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Req. Delivery Date (RDD) <span class="text-red-500">*</span></label>
+                                <input type="date" id="reqDeliveryDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div class="relative">
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Customer Name <span class="text-red-500">*</span></label>
+                                <input type="text" id="customerName" autocomplete="off" placeholder="Type to search customers..." class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <div id="customerSuggestions" class="hidden absolute Regal z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                                <p id="customerHint" class="text-xs mt-1 h-4"></p>
+                            </div>
+                            <div class="relative">
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Material Code <span class="text-red-500">*</span></label>
+                                <input type="text" id="materialCode" autocomplete="off" placeholder="Type to search materials..." class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <div id="materialSuggestions" class="hidden absolute Regal z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                                <p id="materialHint" class="text-xs mt-1 h-4"></p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Material Description (Auto-Fill Locked)</label>
+                            <input type="text" id="materialDesc" class="w-full bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 text-slate-600 cursor-not-allowed" readonly placeholder="Select a Material Code above to populate...">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Quantity <span class="text-red-500">*</span></label>
+                                <input type="number" id="qty" step="any" placeholder="Numeric quantity" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Batch Code <span class="text-red-500">*</span></label>
+                                <input type="text" id="batchCode" placeholder="e.g., BB122727 or U12DEC27" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Expiration Date (Locked)</label>
+                                <input type="text" id="expirationDate" class="w-full bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 text-slate-600 font-medium cursor-not-allowed" readonly placeholder="Auto-calculated date...">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Warehouse Order <span class="text-red-500">*</span></label>
+                            <input type="text" id="whseOrder" placeholder="Enter warehouse order information" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                        <div class="pt-2">
+                            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-150">
+                                Commit Reservation Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="lg:col-span-5 bg-slate-900 text-white p-6 rounded-xl shadow-md border border-slate-800 self-start">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                        <h2 class="text-lg font-bold tracking-wide text-blue-400">📊 Live FEFO Insights</h2>
+                        <span class="text-[10px] uppercase font-mono tracking-widest bg-slate-800 text-blue-300 px-2 py-0.5 rounded border border-slate-700">Real-Time</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-4">Displays matched material records sorted by First Expired, First Out execution sequencing metrics.</p>
+
+                    <div id="fefoTargetMetaData" class="mb-4 bg-slate-950 p-3 rounded-lg border border-slate-800 hidden">
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Stream Filter</div>
+                        <div id="fefoFilterItem" class="text-sm font-mono text-emerald-400 font-bold mt-0.5">--</div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Sales Order <span class="text-red-500">*</span></label>
-                            <input type="text" id="salesOrder" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            <p id="salesOrderHint" class="text-xs mt-1 h-4"></p>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Picklist <span class="text-red-500">*</span></label>
-                            <input type="text" id="picklist" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Req. Delivery Date (RDD) <span class="text-red-500">*</span></label>
-                            <input type="date" id="reqDeliveryDate" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-
-                        <div class="relative">
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Customer Name <span class="text-red-500">*</span></label>
-                            <input type="text" id="customerName" autocomplete="off" placeholder="Type to search customers..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            <div id="customerSuggestions" class="hidden absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
-                            <p id="customerHint" class="text-xs mt-1 h-4"></p>
-                        </div>
-
-                        <div class="relative">
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Material Code <span class="text-red-500">*</span></label>
-                            <input type="text" id="materialCode" autocomplete="off" placeholder="Type to search materials..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            <div id="materialSuggestions" class="hidden absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
-                            <p id="materialHint" class="text-xs mt-1 h-4"></p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Material Description (Auto-Fill Locked)</label>
-                        <input type="text" id="materialDesc" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-600 cursor-not-allowed" readonly placeholder="Select a Material Code above to populate...">
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Quantity <span class="text-red-500">*</span></label>
-                            <input type="number" id="qty" step="any" placeholder="Numeric quantity" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Batch Code <span class="text-red-500">*</span></label>
-                            <input type="text" id="batchCode" placeholder="e.g., BB122727 or U12DEC27" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Expiration Date (Locked)</label>
-                            <input type="text" id="expirationDate" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-600 font-medium cursor-not-allowed" readonly placeholder="Auto-calculated date...">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Warehouse Order <span class="text-red-500">*</span></label>
-                        <input type="text" id="whseOrder" placeholder="Enter warehouse order information (no format restrictions)" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-
-                    <div class="pt-4">
-                        <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200">
-                            Commit Reservation Record
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- FEFO Insights - full width -->
-            <div class="bg-slate-900 text-white p-6 rounded-xl shadow-md border border-slate-800">
-                <h2 class="text-lg font-bold border-b border-slate-800 pb-2 mb-4 tracking-wide text-blue-400">📊 Live FEFO Insights</h2>
-                <p class="text-xs text-slate-400 mb-6">Select a combined Customer and Material item sequence to evaluate live historical and pending profiles.</p>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="p-4 bg-slate-800 rounded-lg border border-slate-700">
-                        <span class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Latest Delivered Batch</span>
-                        <div id="fefoLatestBatch" class="text-2xl font-mono font-bold text-emerald-400">--</div>
-                        <div id="fefoLatestExpiry" class="text-xs text-slate-300 mt-1">Expiry Date: --</div>
-                    </div>
-
-                    <div class="p-4 bg-slate-800 rounded-lg border border-slate-700">
-                        <span class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Pending Undelivered Runway</span>
-                        <div class="max-h-72 overflow-y-auto pr-1">
-                            <table class="w-full text-left text-xs">
-                                <thead>
-                                    <tr class="text-slate-400 border-b border-slate-700">
-                                        <th class="pb-2">Batch</th>
-                                        <th class="pb-2 text-right">Expiry</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="fefoUndeliveredContainer" class="divide-y divide-slate-700 text-slate-200">
-                                    <tr>
-                                        <td colspan="2" class="py-4 text-center text-slate-500 italic">Select customer + material combo to load...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-800 uppercase text-[10px] tracking-wider">
+                                    <th class="pb-2 font-semibold">Sales Order</th>
+                                    <th class="pb-2 font-semibold">RDD</th>
+                                    <th class="pb-2 font-semibold">Customer</th>
+                                    <th class="pb-2 font-semibold">Batch</th>
+                                    <th class="pb-2 font-semibold text-right">Qty</th>
+                                    <th class="pb-2 font-semibold text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fefoInsightsMainBody" class="divide-y divide-slate-800 text-slate-200">
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-slate-500 italic">Select a Customer + Material sequence inside the entry module fields to stream inventory analytics...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-
         </div>
 
-        <!-- ===================== TAB 2: UPDATE MASTERDEL ===================== -->
-        <div id="tabMasterdelView" class="hidden">
-
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h2 class="text-xl font-bold text-gray-900 border-b pb-3 mb-2">Update MasterDel Table</h2>
-                <p class="text-sm text-gray-500 mb-6">Look up a record by Picklist Number, edit its fields, then save the update directly to the <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">masterdel</code> table.</p>
+        <div id="tabMasterdelView" class="tab-content hidden transition-all duration-150">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-900 border-b pb-3 mb-2">Update MasterDel Table</h2>
+                <p class="text-sm text-slate-500 mb-6">Look up a record by Picklist Number, edit its fields, then save changes directly to the database.</p>
 
                 <div class="flex flex-col md:flex-row gap-3 items-start md:items-end mb-6">
                     <div class="w-full md:w-64">
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Picklist No <span class="text-red-500">*</span></label>
-                        <input type="text" id="mdPicklistSearch" maxlength="10" inputmode="numeric" placeholder="10-digit picklist number" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Picklist No <span class="text-red-500">*</span></label>
+                        <input type="text" id="mdPicklistSearch" maxlength="10" inputmode="numeric" placeholder="10-digit picklist number" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     </div>
-                    <button id="mdSearchBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow-sm transition duration-200">
+                    <button id="mdSearchBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-lg shadow-sm transition duration-150">
                         🔍 Search Record
                     </button>
                 </div>
@@ -167,29 +167,139 @@
                 <div id="mdRecordPanel" class="hidden">
                     <div id="mdFieldsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
                     <div class="flex gap-3">
-                        <button id="mdSaveBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-md transition duration-200">
+                        <button id="mdSaveBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-md transition">
                             💾 Update Record
                         </button>
-                        <button id="mdCancelBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2.5 px-5 rounded-lg transition duration-200">
+                        <button id="mdCancelBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2.5 px-5 rounded-lg transition">
                             Cancel
                         </button>
                     </div>
                 </div>
 
                 <div id="mdNotFoundPanel" class="hidden">
-                    <p class="text-sm text-gray-600 mb-4">No record exists yet for this Picklist No. You can create one with an initial status below.</p>
+                    <p class="text-sm text-slate-600 mb-4">No record exists yet for this Picklist No. You can create one with an initial status below.</p>
                     <div class="flex flex-col md:flex-row gap-3 items-start md:items-end">
                         <div class="w-full md:w-64">
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Status</label>
-                            <input type="text" id="mdNewStatus" placeholder="e.g., UNDELIVERED" value="UNDELIVERED" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Status</label>
+                            <input type="text" id="mdNewStatus" placeholder="e.g., UNDELIVERED" value="UNDELIVERED" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         </div>
-                        <button id="mdCreateBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow-sm transition duration-200">
+                        <button id="mdCreateBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-lg shadow-sm transition">
                             ➕ Create Record
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div id="tabMasterDBView" class="tab-content hidden transition-all duration-150">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-900 border-b pb-3 mb-2">Materials Master Registry (`materials_db`)</h2>
+                <p class="text-sm text-slate-500 mb-6">Add new system inventory items or update existing descriptions via the unified index key upsert process.</p>
+                
+                <form id="masterDBForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Material Code <span class="text-red-500">*</span></label>
+                        <input type="text" id="mdbCode" placeholder="e.g., RB713321NF" class="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Material Description <span class="text-red-500">*</span></label>
+                        <input type="text" id="mdbDesc" placeholder="e.g., TERIYAKI SAUCE 12X1KG" class="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition">
+                        💾 Upsert Material Entry
+                    </button>
+                </form>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold text-xs uppercase tracking-wider">
+                                <th class="px-4 py-3">Material Code</th>
+                                <th class="px-4 py-3">Material Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mdbTableBody" class="divide-y divide-slate-200">
+                            <tr>
+                                <td colspan="2" class="px-4 py-4 text-center text-slate-400 italic">No master materials loaded yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tabCustomerDBView" class="tab-content hidden transition-all duration-150">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-900 border-b pb-3 mb-2">Customer Account Index (`customers_db`)</h2>
+                <p class="text-sm text-slate-500 mb-6">Register logistics accounts to support internal cascading referential key configurations.</p>
+
+                <form id="customerDBForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Customer Account Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="cdbName" placeholder="e.g., BINONDO FOODS QC" class="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition">
+                        ➕ Register New Customer
+                    </button>
+                </form>
+
+                <div class="overflow-x-auto max-w-xl">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold text-xs uppercase tracking-wider">
+                                <th class="px-4 py-3">Registered Customer Name</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cdbTableBody" class="divide-y divide-slate-200">
+                            <tr>
+                                <td class="px-4 py-4 text-center text-slate-400 italic">No accounts mapped yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tabAllReservationsView" class="tab-content hidden transition-all duration-150">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 mb-4 gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">All Reservations Transactional Ledger</h2>
+                        <p class="text-sm text-slate-500 mt-0.5">Comprehensive structural log stream tracking warehouse operations.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <input type="text" id="ledgerSearchInput" placeholder="Search Customer/SO/Picklist..." class="border border-slate-300 text-xs rounded-lg px-3 py-2 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="refreshLedgerBtn" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm">
+                            🔄 Refresh Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[10px]">
+                                <th class="px-3 py-3">Entry Date</th>
+                                <th class="px-3 py-3">Sales Order</th>
+                                <th class="px-3 py-3">Picklist</th>
+                                <th class="px-3 py-3">RDD</th>
+                                <th class="px-3 py-3">Customer Name</th>
+                                <th class="px-3 py-3">Material</th>
+                                <th class="px-3 py-3 text-right">Qty</th>
+                                <th class="px-3 py-3">Batch</th>
+                                <th class="px-3 py-3">Expiry Date</th>
+                                <th class="px-3 py-3">Whse Order</th>
+                                <th class="px-3 py-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerTableBody" class="divide-y divide-slate-200 text-slate-700">
+                            <tr>
+                                <td colspan="11" class="px-3 py-8 text-center text-slate-400 italic">Initializing transactional pipeline log streams...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
     </main>
@@ -199,50 +309,60 @@
         const SUPABASE_KEY = "sb_publishable_Mo_b_HNFI83ONCgSneWheg_H161x1MN";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let globalMaterialsMap = {};   // code -> description
-        let allCustomers = [];         // [{customer_name}]
-        let allMaterials = [];         // [{material_code, material_description}]
+        let globalMaterialsMap = {};   
+        let allCustomers = [];         
+        let allMaterials = [];         
 
         window.addEventListener('DOMContentLoaded', async () => {
             console.log("[System Debug] Executing Application Core UI Initialization Sequence...");
             setCurrentTimestamp();
 
-            // CRITICAL STEP: Set up listeners immediately so form is responsive even during data loads
+            setupTabs();
             setupEventListeners();
             setupAutocompleteFields();
-            setupTabs();
             setupMasterdelPanel();
+            setupDBManagementTabs();
 
-            // Fetch lookup data asynchronously
+            // Perform initial full system backend check asynchronously
             await populateLookupData();
+            await refreshAllLocalLedgerTables();
         });
 
-        // ---------- Tabs ----------
-
+        // ---------- System Core Navigation Controller Tabs Mode ----------
         function setupTabs() {
-            const btnReservation = document.getElementById('tabBtnReservation');
-            const btnMasterdel = document.getElementById('tabBtnMasterdel');
-            const viewReservation = document.getElementById('tabReservationView');
-            const viewMasterdel = document.getElementById('tabMasterdelView');
+            const tabsMap = {
+                'tabBtnReservation': 'tabReservationView',
+                'tabBtnMasterdel': 'tabMasterdelView',
+                'tabBtnMasterDB': 'tabMasterDBView',
+                'tabBtnCustomerDB': 'tabCustomerDBView',
+                'tabBtnAllReservations': 'tabAllReservationsView'
+            };
 
-            function activate(tab) {
-                const reservationActive = tab === 'reservation';
-                viewReservation.classList.toggle('hidden', !reservationActive);
-                viewMasterdel.classList.toggle('hidden', reservationActive);
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
 
-                btnReservation.classList.toggle('border-blue-600', reservationActive);
-                btnReservation.classList.toggle('text-blue-700', reservationActive);
-                btnReservation.classList.toggle('border-transparent', !reservationActive);
-                btnReservation.classList.toggle('text-gray-500', !reservationActive);
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetId = tabsMap[btn.id];
+                    
+                    // Reset tab active state UI layouts
+                    tabButtons.forEach(b => {
+                        b.classList.remove('border-b-2', 'border-blue-600', 'text-blue-700');
+                        b.classList.add('border-transparent', 'text-slate-500');
+                    });
+                    tabContents.forEach(c => c.classList.add('hidden'));
 
-                btnMasterdel.classList.toggle('border-blue-600', !reservationActive);
-                btnMasterdel.classList.toggle('text-blue-700', !reservationActive);
-                btnMasterdel.classList.toggle('border-transparent', reservationActive);
-                btnMasterdel.classList.toggle('text-gray-500', reservationActive);
-            }
+                    // Toggle selected item elements explicitly
+                    btn.classList.remove('border-transparent', 'text-slate-500');
+                    btn.classList.add('border-b-2', 'border-blue-600', 'text-blue-700');
+                    document.getElementById(targetId).classList.remove('hidden');
 
-            btnReservation.addEventListener('click', () => activate('reservation'));
-            btnMasterdel.addEventListener('click', () => activate('masterdel'));
+                    // Specialized sub-routines updates
+                    if (targetId === 'tabAllReservationsView') {
+                        loadAllReservationsLedger();
+                    }
+                });
+            });
         }
 
         function setCurrentTimestamp() {
@@ -250,40 +370,48 @@
             document.getElementById('dateOfEntry').value = now.toLocaleString();
         }
 
+        // ---------- Master Engine Data Lookup Populators ----------
         async function populateLookupData() {
             try {
-                // Fetch Customers
+                // System data fetch loop for Customer registries
                 let customerData = [];
                 let cStart = 0, cLimit = 1000, cHasMore = true;
                 while (cHasMore) {
-                    const { data, error } = await _supabase.from('customers_db').select('customer_name').range(cStart, cStart + cLimit - 1);
+                    const { data, error } = await _supabase.from('customers_db').select('customer_name').order('customer_name', { ascending: true }).range(cStart, cStart + cLimit - 1);
                     if (error) throw error;
                     customerData = customerData.concat(data);
                     if (data.length < cLimit) cHasMore = false; else cStart += cLimit;
                 }
                 allCustomers = customerData;
 
-                // Fetch Materials (Handles all 3,888 entries cleanly via systematic pagination loops)
+                // Pagination logic for comprehensive Materials loading
                 let materialData = [];
                 let mStart = 0, mLimit = 1000, mHasMore = true;
                 while (mHasMore) {
-                    const { data, error } = await _supabase.from('materials_db').select('material_code, material_description').range(mStart, mStart + mLimit - 1);
+                    const { data, error } = await _supabase.from('materials_db').select('material_code, material_description').order('material_code', { ascending: true }).range(mStart, mStart + mLimit - 1);
                     if (error) throw error;
                     materialData = materialData.concat(data);
                     if (data.length < mLimit) mHasMore = false; else mStart += mLimit;
                 }
                 allMaterials = materialData;
+                
+                globalMaterialsMap = {};
                 materialData.forEach(m => { globalMaterialsMap[m.material_code] = m.material_description; });
 
-                console.log(`[Database Connection Success] Lookups active. Customers loaded: ${allCustomers.length}, Materials loaded: ${allMaterials.length}`);
+                console.log(`[Database Pipeline Success] Synchronized arrays. Customers: ${allCustomers.length}, Materials: ${allMaterials.length}`);
             } catch (err) {
                 console.error("[Data Import Exception Log]", err);
-                alert(`Data Sync Notice: Issue populating lookup arrays from backend.\nReason: ${err.message || err}`);
+                alert(`Backend Sync Notice: Issue processing lookups from database.\nDetails: ${err.message || err}`);
             }
         }
 
-        // ---------- Autocomplete (Customer & Material) ----------
+        async function refreshAllLocalLedgerTables() {
+            // Internal visual element updates
+            renderMaterialsMasterTable();
+            renderCustomersMasterTable();
+        }
 
+        // ---------- Auto-completion UI Routing Logic ----------
         function setupAutocompleteFields() {
             setupAutocomplete({
                 inputId: 'customerName',
@@ -331,16 +459,15 @@
                 const matches = data.filter(item => getLabel(item).toLowerCase().includes(query)).slice(0, 8);
 
                 if (matches.length === 0) {
-                    box.innerHTML = `<div class="px-3 py-2 text-sm text-gray-400 italic">No matches found</div>`;
+                    box.innerHTML = `<div class="px-3 py-2 text-sm text-slate-400 italic">No matches found</div>`;
                     box.classList.remove('hidden');
                     return;
                 }
 
                 matches.forEach(item => {
                     const row = document.createElement('div');
-                    row.className = "px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0";
+                    row.className = "px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 text-slate-800 font-medium";
                     row.textContent = getLabel(item);
-                    // mousedown fires before the input's blur event, so the click registers
                     row.addEventListener('mousedown', (e) => {
                         e.preventDefault();
                         input.value = getValue(item);
@@ -353,18 +480,9 @@
                 box.classList.remove('hidden');
             }
 
-            input.addEventListener('input', () => {
-                renderSuggestions();
-                onChange();
-            });
-
-            input.addEventListener('focus', () => {
-                if (input.value.trim()) renderSuggestions();
-            });
-
-            input.addEventListener('blur', () => {
-                setTimeout(() => box.classList.add('hidden'), 150);
-            });
+            input.addEventListener('input', () => { renderSuggestions(); onChange(); });
+            input.addEventListener('focus', () => { if (input.value.trim()) renderSuggestions(); });
+            input.addEventListener('blur', () => { setTimeout(() => box.classList.add('hidden'), 150); });
         }
 
         function validateCustomerHint() {
@@ -372,7 +490,7 @@
             const hint = document.getElementById('customerHint');
             if (!val) { hint.textContent = ''; return; }
             const exists = allCustomers.some(c => c.customer_name === val);
-            hint.textContent = exists ? '' : '⚠️ No exact match in customer list yet';
+            hint.textContent = exists ? '' : '⚠️ No exact match in customer master database';
             hint.className = "text-xs mt-1 h-4 text-amber-600";
         }
 
@@ -381,12 +499,11 @@
             const hint = document.getElementById('materialHint');
             if (!val) { hint.textContent = ''; return; }
             const exists = Object.prototype.hasOwnProperty.call(globalMaterialsMap, val);
-            hint.textContent = exists ? '' : '⚠️ No exact match in material list yet';
+            hint.textContent = exists ? '' : '⚠️ No exact match in material master database';
             hint.className = "text-xs mt-1 h-4 text-amber-600";
         }
 
-        // ---------- Standard listeners ----------
-
+        // ---------- Standard Reservation Listeners ----------
         function setupEventListeners() {
             document.getElementById('salesOrder').addEventListener('input', (e) => {
                 const val = e.target.value.trim();
@@ -401,7 +518,7 @@
 
                 if (/^\d{10}$/.test(val)) {
                     const { data, error } = await _supabase.from('masterdel').select('status').eq('picklist_no', val).maybeSingle();
-                    if (data && data.status && data.status.trim() !== "") {
+                    if (data && data.status) {
                         statusInput.value = data.status.toUpperCase();
                     } else {
                         statusInput.value = "UNDELIVERED";
@@ -419,6 +536,7 @@
             document.getElementById('reservationForm').addEventListener('submit', handleFormSubmission);
         }
 
+        // ---------- Batch Code Expiry Date Calculators ----------
         function parseBatchExpirationDate(batchCode) {
             if (!batchCode) return "";
             const prefix2 = batchCode.substring(0, 2).toUpperCase();
@@ -449,47 +567,69 @@
             return `${monthsText[dateObj.getMonth()]}-${String(dateObj.getDate()).padStart(2, '0')}-${dateObj.getFullYear()}`;
         }
 
+        // ---------- Upgraded Live FEFO Insights Logic (Right Panel Container) ----------
         async function evalFEFOEngine() {
             const customer = document.getElementById('customerName').value.trim();
             const material = document.getElementById('materialCode').value.trim();
-            if (!customer || !material) return;
+            const containerBody = document.getElementById('fefoInsightsMainBody');
+            const filterMetaBox = document.getElementById('fefoTargetMetaData');
 
-            const { data: records, error } = await _supabase.from('reservations').select('batch_code, expiration_date, status').eq('customer_name', customer).eq('material_code', material);
-            if (error) return;
+            if (!customer || !material) {
+                filterMetaBox.classList.add('hidden');
+                return;
+            }
 
-            let deliveredRecords = [], undeliveredRecords = [];
+            // Expose filtering metadata info blocks
+            filterMetaBox.classList.remove('hidden');
+            document.getElementById('fefoFilterItem').textContent = `${material} ➡️ ${customer}`;
+
+            // Fetch records from database
+            const { data: records, error } = await _supabase
+                .from('reservations')
+                .select('sales_order, required_delivery_date, customer_name, batch_code, qty, status, expiration_date')
+                .eq('customer_name', customer)
+                .eq('material_code', material);
+
+            if (error) {
+                console.error("[FEFO Engine Query Failure]", error);
+                return;
+            }
+
+            containerBody.innerHTML = "";
+            if (!records || records.length === 0) {
+                containerBody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 italic">No existing delivery reservation profiles found matching this combination.</td></tr>`;
+                return;
+            }
+
+            // FEFO execution standard: sort by earliest expiration date first
+            records.sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date));
+
             records.forEach(r => {
-                if ((r.status || "UNDELIVERED").toUpperCase().trim() === "DELIVERED") deliveredRecords.push(r); else undeliveredRecords.push(r);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 border-b border-slate-800/60 transition duration-100";
+                
+                // Set badge styles dynamically
+                const isDelivered = (r.status || '').toUpperCase() === 'DELIVERED';
+                const statusBadge = isDelivered 
+                    ? `<span class="bg-emerald-950 text-emerald-400 font-bold border border-emerald-800 text-[9px] px-1.5 py-0.5 rounded">DEL</span>`
+                    : `<span class="bg-amber-950 text-amber-400 font-bold border border-amber-800 text-[9px] px-1.5 py-0.5 rounded">UNDEL</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-2.5 font-mono text-slate-300">${r.sales_order}</td>
+                    <td class="py-2.5 text-slate-400 whitespace-nowrap">${r.required_delivery_date}</td>
+                    <td class="py-2.5 font-medium max-w-[120px] truncate text-slate-300" title="${r.customer_name}">${r.customer_name}</td>
+                    <td class="py-2.5 font-mono text-blue-300 font-semibold" title="Expires: ${r.expiration_date}">${r.batch_code}</td>
+                    <td class="py-2.5 text-right font-bold text-slate-100">${parseFloat(r.qty).toLocaleString()}</td>
+                    <td class="py-2.5 text-center">${statusBadge}</td>
+                `;
+                containerBody.appendChild(tr);
             });
-
-            if (deliveredRecords.length > 0) {
-                deliveredRecords.sort((a, b) => new Date(b.expiration_date) - new Date(a.expiration_date));
-                document.getElementById('fefoLatestBatch').textContent = deliveredRecords[0].batch_code;
-                document.getElementById('fefoLatestExpiry').textContent = `Expiry Date: ${deliveredRecords[0].expiration_date}`;
-            } else {
-                document.getElementById('fefoLatestBatch').textContent = "--";
-                document.getElementById('fefoLatestExpiry').textContent = "Expiry: No deliveries recorded";
-            }
-
-            const tbody = document.getElementById('fefoUndeliveredContainer');
-            tbody.innerHTML = "";
-            if (undeliveredRecords.length > 0) {
-                undeliveredRecords.forEach(u => {
-                    let row = document.createElement('tr');
-                    row.className = "hover:bg-slate-800/50 transition duration-150";
-                    row.innerHTML = `<td class="py-2.5 font-mono font-medium">${u.batch_code}</td><td class="py-2.5 text-right font-semibold text-amber-400">${u.expiration_date}</td>`;
-                    tbody.appendChild(row);
-                });
-            } else {
-                tbody.innerHTML = `<tr><td colspan="2" class="py-4 text-center text-slate-500 italic">No remaining undelivered runway found</td></tr>`;
-            }
         }
 
-        // Defensive execution structure - intercepts submission and manually triggers explicit alert popups
+        // ---------- Reservation Form Handling ----------
         async function handleFormSubmission(e) {
             e.preventDefault();
-            console.log("[Form Core Logging] Submit request received. Running verification...");
-
+            
             const salesOrder = document.getElementById('salesOrder').value.trim();
             const picklist = document.getElementById('picklist').value.trim();
             const reqDeliveryDate = document.getElementById('reqDeliveryDate').value;
@@ -500,38 +640,36 @@
             const batchCode = document.getElementById('batchCode').value.trim();
             const expirationDate = document.getElementById('expirationDate').value;
             const whseOrder = document.getElementById('whseOrder').value.trim();
+            const currentStatus = document.getElementById('status').value.toUpperCase();
 
-            // 1. Explicit Check for Empty Mandatory Input Columns
             if (!salesOrder || !picklist || !reqDeliveryDate || !customerName || !materialCode || !qtyStr || !batchCode || !whseOrder) {
-                alert("⚠️ Validation Error:\nPlease fill out all required fields marked with a red asterisk (*).");
+                alert("⚠️ Validation Notice:\nPlease fill in all fields marked with a red asterisk (*).");
                 return;
             }
 
-            // 2. Pattern Length Controls maintained for tracking values
-            if (!/^\d{10}$/.test(salesOrder)) {
-                alert("⚠️ Input Formatting Error:\nSales Order field must be exactly 10 raw digits.");
+            if (!/^\d{10}$/.test(salesOrder) || !/^\d{10}$/.test(picklist)) {
+                alert("⚠️ Format Pattern Infraction:\nSales Order and Picklist parameters must be exactly 10 raw digits long.");
                 return;
             }
-            if (!/^\d{10}$/.test(picklist)) {
-                alert("⚠️ Input Formatting Error:\nPicklist field must be exactly 10 raw digits.");
-                return;
-            }
+
             if (!expirationDate) {
-                alert("⚠️ Batch Code Error:\nCould not process an Expiration Date. Verify that your batch syntax prefix is valid.");
+                alert("⚠️ Expiry Conversion Failure:\nCould not process the batch validation window. Check formatting prefixes.");
                 return;
             }
 
-            // 3. Free-typed Customer / Material must match a known lookup entry (protects FK integrity)
+            // Ensure references match parent foreign key requirements
             const customerValid = allCustomers.some(c => c.customer_name === customerName);
-            if (!customerValid) {
-                alert("⚠️ Customer Not Recognized:\nPlease select a Customer from the suggestion list that appears as you type.");
-                return;
-            }
             const materialValid = Object.prototype.hasOwnProperty.call(globalMaterialsMap, materialCode);
-            if (!materialValid) {
-                alert("⚠️ Material Not Recognized:\nPlease select a Material Code from the suggestion list that appears as you type.");
+
+            if (!customerValid || !materialValid) {
+                alert("⚠️ Integrity Violation:\nCustomer Name or Material Code does not match master tables. Please use the autocomplete choices.");
                 return;
             }
+
+            // Standardize output formats to fit date field definitions
+            let parts = expirationDate.split('-');
+            const monthsMap = {"JAN":"01","FEB":"02","MAR":"03","APR":"04","MAY":"05","JUN":"06","JUL":"07","AUG":"08","SEP":"09","OCT":"10","NOV":"11","DEC":"12"};
+            let formattedExpirySQL = `${parts[2]}-${monthsMap[parts[0]]}-${parts[1]}`;
 
             const payload = {
                 sales_order: salesOrder,
@@ -542,168 +680,251 @@
                 material_description: materialDescription,
                 qty: parseFloat(qtyStr),
                 batch_code: batchCode,
-                expiration_date: expirationDate,
-                whse_order: whseOrder, // Free text parameter string with no limits applied
-                status: document.getElementById('status').value
+                expiration_date: formattedExpirySQL,
+                whse_order: whseOrder,
+                status: currentStatus
             };
 
-            try {
-                const { error } = await _supabase.from('reservations').insert([payload]);
+            // Double check validation to avoid foreign key errors on custom picklists
+            const { data: plCheck } = await _supabase.from('masterdel').select('picklist_no').eq('picklist_no', picklist).maybeSingle();
+            if (!plCheck) {
+                await _supabase.from('masterdel').insert({ picklist_no: picklist, status: currentStatus });
+            }
 
-                if (error) {
-                    console.error("[Database Connection Object]", error);
-                    alert(
-                        `❌ Supabase Transaction Rejected!\n\n` +
-                        `• Code: ${error.code}\n` +
-                        `• Message: ${error.message}\n` +
-                        `• Details: ${error.details || 'None'}\n\n` +
-                        `👉 Hint: If code is 23503, verify that your backend tables contain this exact Customer and Material.`
-                    );
-                } else {
-                    alert("✅ Success!\nYour Reservation Record has been committed and saved into Supabase successfully.");
-                    document.getElementById('reservationForm').reset();
-                    document.getElementById('materialDesc').value = '';
-                    setCurrentTimestamp();
-                    evalFEFOEngine();
-                }
-            } catch (catchErr) {
-                console.error("[Thread Exception Exception]", catchErr);
-                alert("❌ Critical Interruption Engine Exception: " + catchErr.message);
+            const { error } = await _supabase.from('reservations').insert(payload);
+
+            if (error) {
+                alert(`❌ Record Rejection Notice:\nBackend database encountered an error: ${error.message}`);
+            } else {
+                alert("🎉 Reservation Log Successfully Committed!");
+                document.getElementById('reservationForm').reset();
+                setCurrentTimestamp();
+                document.getElementById('status').value = "UNDELIVERED";
+                evalFEFOEngine();
             }
         }
 
-        // ---------- Tab 2: Update MasterDel ----------
-
-        let mdCurrentPicklist = null;
-        let mdExcludedKeys = ['picklist_no']; // columns shown read-only / excluded from editable inputs
-
+        // ---------- TAB 2: Update MasterDel Logic Sub-routines ----------
         function setupMasterdelPanel() {
-            document.getElementById('mdSearchBtn').addEventListener('click', searchMasterdelRecord);
-            document.getElementById('mdPicklistSearch').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); searchMasterdelRecord(); }
-            });
-            document.getElementById('mdSaveBtn').addEventListener('click', saveMasterdelRecord);
-            document.getElementById('mdCreateBtn').addEventListener('click', createMasterdelRecord);
-            document.getElementById('mdCancelBtn').addEventListener('click', resetMasterdelPanel);
-        }
+            let activeRecord = null;
+            const searchInput = document.getElementById('mdPicklistSearch');
+            const searchBtn = document.getElementById('mdSearchBtn');
+            const message = document.getElementById('mdSearchMessage');
+            const recordPanel = document.getElementById('mdRecordPanel');
+            const fieldsContainer = document.getElementById('mdFieldsContainer');
+            const notFoundPanel = document.getElementById('mdNotFoundPanel');
 
-        function resetMasterdelPanel() {
-            mdCurrentPicklist = null;
-            document.getElementById('mdRecordPanel').classList.add('hidden');
-            document.getElementById('mdNotFoundPanel').classList.add('hidden');
-            document.getElementById('mdSearchMessage').textContent = '';
-            document.getElementById('mdFieldsContainer').innerHTML = '';
-            document.getElementById('mdPicklistSearch').value = '';
-        }
+            searchBtn.addEventListener('click', async () => {
+                const query = searchInput.value.trim();
+                message.textContent = "";
+                recordPanel.classList.add('hidden');
+                notFoundPanel.classList.add('hidden');
 
-        async function searchMasterdelRecord() {
-            const picklistNo = document.getElementById('mdPicklistSearch').value.trim();
-            const msg = document.getElementById('mdSearchMessage');
-            document.getElementById('mdRecordPanel').classList.add('hidden');
-            document.getElementById('mdNotFoundPanel').classList.add('hidden');
-
-            if (!/^\d{10}$/.test(picklistNo)) {
-                msg.textContent = "⚠️ Picklist No must be exactly 10 digits.";
-                msg.className = "text-sm mb-4 text-amber-600";
-                return;
-            }
-
-            msg.textContent = "Searching...";
-            msg.className = "text-sm mb-4 text-gray-500";
-
-            try {
-                const { data, error } = await _supabase.from('masterdel').select('*').eq('picklist_no', picklistNo).maybeSingle();
-                if (error) throw error;
-
-                if (!data) {
-                    msg.textContent = "";
-                    mdCurrentPicklist = picklistNo;
-                    document.getElementById('mdNewStatus').value = 'UNDELIVERED';
-                    document.getElementById('mdNotFoundPanel').classList.remove('hidden');
+                if (!/^\d{10}$/.test(query)) {
+                    message.className = "text-sm text-red-600";
+                    message.textContent = "⚠️ Please supply a structural 10-digit tracking picklist numerical combination.";
                     return;
                 }
 
-                mdCurrentPicklist = picklistNo;
-                msg.textContent = `✅ Record found for Picklist No ${picklistNo}.`;
-                msg.className = "text-sm mb-4 text-emerald-600";
-                renderMasterdelFields(data);
-                document.getElementById('mdRecordPanel').classList.remove('hidden');
-            } catch (err) {
-                console.error("[MasterDel Search Exception]", err);
-                msg.textContent = `❌ Search failed: ${err.message || err}`;
-                msg.className = "text-sm mb-4 text-red-600";
-            }
-        }
+                const { data, error } = await _supabase.from('masterdel').select('*').eq('picklist_no', query).maybeSingle();
 
-        function renderMasterdelFields(record) {
-            const container = document.getElementById('mdFieldsContainer');
-            container.innerHTML = '';
+                if (error) {
+                    message.className = "text-sm text-red-600";
+                    message.textContent = `Error calling storage framework: ${error.message}`;
+                    return;
+                }
 
-            Object.keys(record).forEach(key => {
-                const wrapper = document.createElement('div');
-                const isReadOnly = mdExcludedKeys.includes(key);
-                const label = document.createElement('label');
-                label.className = "block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1";
-                label.textContent = key.replace(/_/g, ' ');
-                wrapper.appendChild(label);
+                if (data) {
+                    activeRecord = data;
+                    fieldsContainer.innerHTML = `
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Picklist Key (Immutable)</label>
+                            <input type="text" value="${data.picklist_no}" readonly class="w-full bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 cursor-not-allowed font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-700 mb-1">Fulfillment Status String</label>
+                            <input type="text" id="mdInputStatus" value="${data.status || ''}" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold">
+                        </div>
+                    `;
+                    recordPanel.classList.remove('hidden');
+                } else {
+                    notFoundPanel.classList.remove('hidden');
+                }
+            });
 
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.dataset.fieldKey = key;
-                input.value = record[key] === null || record[key] === undefined ? '' : record[key];
-                input.className = isReadOnly
-                    ? "w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-500 cursor-not-allowed"
-                    : "w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none";
-                if (isReadOnly) input.readOnly = true;
-                wrapper.appendChild(input);
+            document.getElementById('mdSaveBtn').addEventListener('click', async () => {
+                if (!activeRecord) return;
+                const nextStatus = document.getElementById('mdInputStatus').value.trim().toUpperCase();
+                
+                // Update master status tracking array
+                const { error } = await _supabase.from('masterdel').update({ status: nextStatus }).eq('picklist_no', activeRecord.picklist_no);
+                
+                if (error) {
+                    alert(`Update rejected: ${error.message}`);
+                } else {
+                    // Update matching records in the reservations table to keep data synchronized
+                    await _supabase.from('reservations').update({ status: nextStatus }).eq('picklist', activeRecord.picklist_no);
+                    alert("✅ MasterDel system configuration modified successfully.");
+                    recordPanel.classList.add('hidden');
+                    searchInput.value = "";
+                }
+            });
 
-                container.appendChild(wrapper);
+            document.getElementById('mdCreateBtn').addEventListener('click', async () => {
+                const pickNo = searchInput.value.trim();
+                const initStatus = document.getElementById('mdNewStatus').value.trim().toUpperCase();
+                if (!pickNo || !initStatus) return;
+
+                const { error } = await _supabase.from('masterdel').insert({ picklist_no: pickNo, status: initStatus });
+                if (error) {
+                    alert(`Creation processing failure: ${error.message}`);
+                } else {
+                    alert(`✅ Registry line entry initialized successfully.`);
+                    notFoundPanel.classList.add('hidden');
+                    searchInput.value = "";
+                }
+            });
+
+            document.getElementById('mdCancelBtn').addEventListener('click', () => {
+                recordPanel.classList.add('hidden');
+                searchInput.value = "";
             });
         }
 
-        async function saveMasterdelRecord() {
-            if (!mdCurrentPicklist) return;
-            const msg = document.getElementById('mdSearchMessage');
-            const inputs = document.querySelectorAll('#mdFieldsContainer input[data-field-key]');
+        // ---------- TAB 3 & 4: Master DB Entities Controllers ----------
+        function setupDBManagementTabs() {
+            // Master Materials Form Submit
+            document.getElementById('masterDBForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const code = document.getElementById('mdbCode').value.trim();
+                const desc = document.getElementById('mdbDesc').value.trim();
 
-            const updates = {};
-            inputs.forEach(input => {
-                const key = input.dataset.fieldKey;
-                if (mdExcludedKeys.includes(key)) return;
-                updates[key] = input.value.trim() === '' ? null : input.value.trim();
+                if (!code || !desc) { alert("Please complete both parameters."); return; }
+
+                const { error } = await _supabase.from('materials_db').upsert({ material_code: code, material_description: desc });
+                if (error) {
+                    alert(`Database operation failed: ${error.message}`);
+                } else {
+                    alert("Material master ledger updated successfully.");
+                    document.getElementById('masterDBForm').reset();
+                    await populateLookupData();
+                    renderMaterialsMasterTable();
+                }
             });
 
-            try {
-                const { error } = await _supabase.from('masterdel').update(updates).eq('picklist_no', mdCurrentPicklist);
-                if (error) throw error;
-                msg.textContent = `✅ Record for Picklist No ${mdCurrentPicklist} updated successfully.`;
-                msg.className = "text-sm mb-4 text-emerald-600";
-            } catch (err) {
-                console.error("[MasterDel Update Exception]", err);
-                alert(`❌ Update failed:\n${err.message || err}`);
-            }
+            // Master Customers Form Submit
+            document.getElementById('customerDBForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('cdbName').value.trim();
+
+                if (!name) { alert("Please complete the Name input parameter."); return; }
+
+                const { error } = await _supabase.from('customers_db').insert({ customer_name: name });
+                if (error) {
+                    alert(`Database operation failed: ${error.message}`);
+                } else {
+                    alert("Customer account successfully registered.");
+                    document.getElementById('customerDBForm').reset();
+                    await populateLookupData();
+                    renderCustomersMasterTable();
+                }
+            });
+
+            // Ledger adjustments listeners
+            document.getElementById('refreshLedgerBtn').addEventListener('click', () => loadAllReservationsLedger());
+            document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => loadAllReservationsLedger(), 300));
         }
 
-        async function createMasterdelRecord() {
-            if (!mdCurrentPicklist) return;
-            const status = document.getElementById('mdNewStatus').value.trim() || 'UNDELIVERED';
-            const msg = document.getElementById('mdSearchMessage');
-
-            try {
-                const { error } = await _supabase.from('masterdel').insert([{ picklist_no: mdCurrentPicklist, status }]);
-                if (error) throw error;
-                msg.textContent = `✅ New record created for Picklist No ${mdCurrentPicklist}.`;
-                msg.className = "text-sm mb-4 text-emerald-600";
-                document.getElementById('mdNotFoundPanel').classList.add('hidden');
-                searchMasterdelRecord();
-            } catch (err) {
-                console.error("[MasterDel Create Exception]", err);
-                alert(`❌ Create failed:\n${err.message || err}`);
+        function renderMaterialsMasterTable() {
+            const body = document.getElementById('mdbTableBody');
+            body.innerHTML = "";
+            if (allMaterials.length === 0) {
+                body.innerHTML = `<tr><td colspan="2" class="px-4 py-4 text-center text-slate-400 italic">No inventory material rows found inside reference memory maps.</td></tr>`;
+                return;
             }
+            allMaterials.slice(0, 15).forEach(m => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 text-xs";
+                tr.innerHTML = `<td class="px-4 py-2 font-mono font-bold text-slate-700">${m.material_code}</td><td class="px-4 py-2 text-slate-600">${m.material_description}</td>`;
+                body.appendChild(tr);
+            });
         }
 
-        function debounce(func, wait) {
-            let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); };
+        function renderCustomersMasterTable() {
+            const body = document.getElementById('cdbTableBody');
+            body.innerHTML = "";
+            if (allCustomers.length === 0) {
+                body.innerHTML = `<tr><td class="px-4 py-4 text-center text-slate-400 italic">No customer account links established inside database.</td></tr>`;
+                return;
+            }
+            allCustomers.slice(0, 15).forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 text-xs";
+                tr.innerHTML = `<td class="px-4 py-2 font-medium text-slate-700">${c.customer_name}</td>`;
+                body.appendChild(tr);
+            });
+        }
+
+        // ---------- TAB 5: Bulk System Transaction Ledger Routing ----------
+        async function loadAllReservationsLedger() {
+            const tbody = document.getElementById('ledgerTableBody');
+            const searchVal = document.getElementById('ledgerSearchInput').value.trim();
+            tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-6 text-center text-slate-400 italic">Streaming live operational databases records...</td></tr>`;
+
+            let query = _supabase.from('reservations').select('*');
+
+            if (searchVal) {
+                query = query.or(`sales_order.ilike.%${searchVal}%,picklist.ilike.%${searchVal}%,customer_name.ilike.%${searchVal}%`);
+            }
+
+            // Cap display visualization to safe execution size bounds
+            const { data, error } = await query.order('date_of_entry', { ascending: false }).range(0, 49);
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-4 text-center text-red-500 font-semibold">Ledger Pipeline Failure: ${error.message}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = "";
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-4 text-center text-slate-400 italic">No matching reservation history matches storage indexes.</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b border-slate-100 transition";
+                
+                const dDate = item.date_of_entry ? new Date(item.date_of_entry).toLocaleDateString() : '--';
+                const isDel = (item.status || '').toUpperCase() === 'DELIVERED';
+                const badge = isDel 
+                    ? `<span class="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-200">DELIVERED</span>`
+                    : `<span class="bg-amber-100 text-amber-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-amber-200">UNDELIVERED</span>`;
+
+                tr.innerHTML = `
+                    <td class="px-3 py-3 text-slate-500 whitespace-nowrap">${dDate}</td>
+                    <td class="px-3 py-3 font-mono font-semibold text-slate-900">${item.sales_order}</td>
+                    <td class="px-3 py-3 font-mono text-slate-600">${item.picklist}</td>
+                    <td class="px-3 py-3 text-slate-600 whitespace-nowrap">${item.required_delivery_date || '--'}</td>
+                    <td class="px-3 py-3 font-medium text-slate-800 truncate max-w-[150px]" title="${item.customer_name}">${item.customer_name}</td>
+                    <td class="px-3 py-3 text-slate-600 max-w-[180px] truncate" title="${item.material_code} - ${item.material_description}">${item.material_code}</td>
+                    <td class="px-3 py-3 text-right font-bold text-slate-900">${parseFloat(item.qty).toLocaleString()}</td>
+                    <td class="px-3 py-3 font-mono text-blue-600 font-medium">${item.batch_code}</td>
+                    <td class="px-3 py-3 text-amber-700 font-medium whitespace-nowrap">${item.expiration_date || '--'}</td>
+                    <td class="px-3 py-3 text-slate-500 max-w-[120px] truncate" title="${item.whse_order}">${item.whse_order}</td>
+                    <td class="px-3 py-3 text-center">${badge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ---------- Utility Helper Pipeline Functions ----------
+        function debounce(func, delay) {
+            let timer;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => func.apply(this, args), delay);
+            };
         }
     </script>
 </body>

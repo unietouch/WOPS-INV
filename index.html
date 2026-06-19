@@ -601,26 +601,15 @@
                 return;
             }
 
-            // Isolate delivered and undelivered streams
+            // Segregate delivered and undelivered rows[cite: 1]
             const deliveredRecords = records.filter(r => (r.status || '').toUpperCase() === 'DELIVERED');
             const undeliveredRecords = records.filter(r => (r.status || '').toUpperCase() !== 'DELIVERED');
 
-            let processedRecords = [...undeliveredRecords];
-
-            // Extract exactly one row for delivered items with the absolute latest expiration date
-            if (deliveredRecords.length > 0) {
-                deliveredRecords.sort((a, b) => new Date(b.expiration_date) - new Date(a.expiration_date));
-                processedRecords.push(deliveredRecords[0]);
-            }
-
-            // FEFO execution standard: sort final mixed display by earliest expiration date first
-            processedRecords.sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date));
-
-            processedRecords.forEach(r => {
+            // Shared structural function to build standard data records rows
+            function appendRecordRow(r) {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-800/40 border-b border-slate-800/60 transition duration-100";
                 
-                // Set badge styles dynamically
                 const isDelivered = (r.status || '').toUpperCase() === 'DELIVERED';
                 const statusBadge = isDelivered 
                     ? `<span class="bg-emerald-950 text-emerald-400 font-bold border border-emerald-800 text-[9px] px-1.5 py-0.5 rounded">DEL</span>`
@@ -635,7 +624,41 @@
                     <td class="py-2.5 text-center">${statusBadge}</td>
                 `;
                 containerBody.appendChild(tr);
-            });
+            }
+
+            // 1. Render Section Header: Latest Delivered Batch[cite: 1]
+            const delHeaderRow = document.createElement('tr');
+            delHeaderRow.className = "bg-slate-950/80 border-b border-slate-800";
+            delHeaderRow.innerHTML = `<td colspan="6" class="py-2 px-2 text-[10px] uppercase font-mono font-bold text-emerald-400 tracking-wider">⏱️ Latest Delivered Batch</td>`;
+            containerBody.appendChild(delHeaderRow);
+
+            if (deliveredRecords.length > 0) {
+                // Sort delivered descending by expiration date to obtain furthest out latest window[cite: 1]
+                deliveredRecords.sort((a, b) => new Date(b.expiration_date) - new Date(a.expiration_date));
+                appendRecordRow(deliveredRecords[0]); // Output only the top row record[cite: 1]
+            } else {
+                const emptyDelRow = document.createElement('tr');
+                emptyDelRow.className = "border-b border-slate-800/40";
+                emptyDelRow.innerHTML = `<td colspan="6" class="py-3 text-center text-slate-500 italic text-[11px]">No active delivered records found.</td>`;
+                containerBody.appendChild(emptyDelRow);
+            }
+
+            // 2. Render Section Header: Undelivered Batches Allocation Queue[cite: 1]
+            const undelHeaderRow = document.createElement('tr');
+            undelHeaderRow.className = "bg-slate-950/80 border-b border-slate-800";
+            undelHeaderRow.innerHTML = `<td colspan="6" class="py-2 px-2 text-[10px] uppercase font-mono font-bold text-amber-400 tracking-wider">📦 Undelivered Allocation Queue</td>`;
+            containerBody.appendChild(undHeaderRow);
+
+            if (undeliveredRecords.length > 0) {
+                // Standard FEFO Sorting Metric: Earliest Expiration Date First[cite: 1]
+                undeliveredRecords.sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date));
+                undeliveredRecords.forEach(r => appendRecordRow(r));
+            } else {
+                const emptyUndelRow = document.createElement('tr');
+                emptyUndelRow.className = "border-b border-slate-800/40";
+                emptyUndelRow.innerHTML = `<td colspan="6" class="py-3 text-center text-slate-500 italic text-[11px]">No remaining undelivered allocations in pipeline.</td>`;
+                containerBody.appendChild(emptyUndelRow);
+            }
         }
 
         // ---------- Reservation Form Handling ----------

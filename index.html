@@ -16,144 +16,182 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-        <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h2 class="text-xl font-bold text-gray-900 border-b pb-3 mb-6">Reservation Record Entry</h2>
-
-            <form id="reservationForm" class="space-y-5" novalidate>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Date of Entry (Auto)</label>
-                        <input type="text" id="dateOfEntry" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-500 cursor-not-allowed" readonly>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Status (Auto lookup via Picklist)</label>
-                        <input type="text" id="status" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 font-bold text-gray-600 cursor-not-allowed" value="UNDELIVERED" readonly>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Sales Order <span class="text-red-500">*</span></label>
-                        <input type="text" id="salesOrder" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        <p id="salesOrderHint" class="text-xs mt-1 h-4"></p>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Picklist <span class="text-red-500">*</span></label>
-                        <input type="text" id="picklist" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Req. Delivery Date (RDD) <span class="text-red-500">*</span></label>
-                        <input type="date" id="reqDeliveryDate" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-
-                    <div class="relative">
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Customer Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="customerName" autocomplete="off" placeholder="Type to search customers..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        <div id="customerSuggestions" class="hidden absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
-                        <p id="customerHint" class="text-xs mt-1 h-4"></p>
-                    </div>
-
-                    <div class="relative">
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Material Code <span class="text-red-500">*</span></label>
-                        <input type="text" id="materialCode" autocomplete="off" placeholder="Type to search materials..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        <div id="materialSuggestions" class="hidden absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
-                        <p id="materialHint" class="text-xs mt-1 h-4"></p>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Material Description (Auto-Fill Locked)</label>
-                    <input type="text" id="materialDesc" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-600 cursor-not-allowed" readonly placeholder="Select a Material Code above to populate...">
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Quantity <span class="text-red-500">*</span></label>
-                        <input type="number" id="qty" step="any" placeholder="Numeric quantity" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Batch Code <span class="text-red-500">*</span></label>
-                        <input type="text" id="batchCode" placeholder="e.g., BB122727 or U12DEC27" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Expiration Date (Locked)</label>
-                        <input type="text" id="expirationDate" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-600 font-medium cursor-not-allowed" readonly placeholder="Auto-calculated date...">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Warehouse Order <span class="text-red-500">*</span></label>
-                    <input type="text" id="whseOrder" placeholder="Enter warehouse order information (no format restrictions)" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                </div>
-
-                <div class="pt-4">
-                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200">
-                        Commit Reservation Record
-                    </button>
-                </div>
-            </form>
+    <nav class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8 flex gap-2">
+            <button id="tabBtnReservation" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-700">📝 Reservation Entry</button>
+            <button id="tabBtnMasterdel" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700">🔄 Update MasterDel</button>
         </div>
+    </nav>
 
-        <div class="space-y-6">
+    <main class="max-w-7xl mx-auto p-4 lg:p-8">
 
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <h2 class="text-sm font-bold uppercase tracking-wider text-gray-500 border-b pb-2 mb-3">📋 Live Entry Preview</h2>
-                <dl class="text-sm divide-y divide-gray-100">
-                    <div class="flex justify-between py-2">
-                        <dt class="text-gray-500">Sales Order</dt>
-                        <dd id="previewSalesOrder" class="font-mono font-semibold text-gray-800">--</dd>
+        <!-- ===================== TAB 1: RESERVATION ENTRY ===================== -->
+        <div id="tabReservationView">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+                <h2 class="text-xl font-bold text-gray-900 border-b pb-3 mb-6">Reservation Record Entry</h2>
+
+                <form id="reservationForm" class="space-y-5" novalidate>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Date of Entry (Auto)</label>
+                            <input type="text" id="dateOfEntry" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-500 cursor-not-allowed" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Status (Auto lookup via Picklist)</label>
+                            <input type="text" id="status" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 font-bold text-gray-600 cursor-not-allowed" value="UNDELIVERED" readonly>
+                        </div>
                     </div>
-                    <div class="flex justify-between py-2">
-                        <dt class="text-gray-500">RDD</dt>
-                        <dd id="previewRDD" class="font-mono font-semibold text-gray-800">--</dd>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Sales Order <span class="text-red-500">*</span></label>
+                            <input type="text" id="salesOrder" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p id="salesOrderHint" class="text-xs mt-1 h-4"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Picklist <span class="text-red-500">*</span></label>
+                            <input type="text" id="picklist" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
                     </div>
-                    <div class="flex justify-between py-2 gap-3">
-                        <dt class="text-gray-500 shrink-0">Customer</dt>
-                        <dd id="previewCustomer" class="font-semibold text-gray-800 text-right truncate">--</dd>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Req. Delivery Date (RDD) <span class="text-red-500">*</span></label>
+                            <input type="date" id="reqDeliveryDate" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                        <div class="relative">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Customer Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="customerName" autocomplete="off" placeholder="Type to search customers..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <div id="customerSuggestions" class="hidden absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                            <p id="customerHint" class="text-xs mt-1 h-4"></p>
+                        </div>
+
+                        <div class="relative">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Material Code <span class="text-red-500">*</span></label>
+                            <input type="text" id="materialCode" autocomplete="off" placeholder="Type to search materials..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <div id="materialSuggestions" class="hidden absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                            <p id="materialHint" class="text-xs mt-1 h-4"></p>
+                        </div>
                     </div>
-                    <div class="flex justify-between py-2 gap-3">
-                        <dt class="text-gray-500 shrink-0">Material</dt>
-                        <dd id="previewMaterial" class="font-semibold text-gray-800 text-right truncate">--</dd>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Material Description (Auto-Fill Locked)</label>
+                        <input type="text" id="materialDesc" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-600 cursor-not-allowed" readonly placeholder="Select a Material Code above to populate...">
                     </div>
-                </dl>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Quantity <span class="text-red-500">*</span></label>
+                            <input type="number" id="qty" step="any" placeholder="Numeric quantity" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Batch Code <span class="text-red-500">*</span></label>
+                            <input type="text" id="batchCode" placeholder="e.g., BB122727 or U12DEC27" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Expiration Date (Locked)</label>
+                            <input type="text" id="expirationDate" class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-600 font-medium cursor-not-allowed" readonly placeholder="Auto-calculated date...">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Warehouse Order <span class="text-red-500">*</span></label>
+                        <input type="text" id="whseOrder" placeholder="Enter warehouse order information (no format restrictions)" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200">
+                            Commit Reservation Record
+                        </button>
+                    </div>
+                </form>
             </div>
 
+            <!-- FEFO Insights - full width -->
             <div class="bg-slate-900 text-white p-6 rounded-xl shadow-md border border-slate-800">
                 <h2 class="text-lg font-bold border-b border-slate-800 pb-2 mb-4 tracking-wide text-blue-400">📊 Live FEFO Insights</h2>
                 <p class="text-xs text-slate-400 mb-6">Select a combined Customer and Material item sequence to evaluate live historical and pending profiles.</p>
 
-                <div class="mb-6 p-4 bg-slate-800 rounded-lg border border-slate-700">
-                    <span class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Latest Delivered Batch</span>
-                    <div id="fefoLatestBatch" class="text-xl font-mono font-bold text-emerald-400">--</div>
-                    <div id="fefoLatestExpiry" class="text-xs text-slate-300 mt-1">Expiry Date: --</div>
-                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                        <span class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Latest Delivered Batch</span>
+                        <div id="fefoLatestBatch" class="text-2xl font-mono font-bold text-emerald-400">--</div>
+                        <div id="fefoLatestExpiry" class="text-xs text-slate-300 mt-1">Expiry Date: --</div>
+                    </div>
 
-                <div class="p-4 bg-slate-800 rounded-lg border border-slate-700">
-                    <span class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Pending Undelivered Runway</span>
-                    <div class="max-h-60 overflow-y-auto pr-1">
-                        <table class="w-full text-left text-xs">
-                            <thead>
-                                <tr class="text-slate-400 border-b border-slate-700">
-                                    <th class="pb-2">Batch</th>
-                                    <th class="pb-2 text-right">Expiry</th>
-                                </tr>
-                            </thead>
-                            <tbody id="fefoUndeliveredContainer" class="divide-y divide-slate-700 text-slate-200">
-                                <tr>
-                                    <td colspan="2" class="py-4 text-center text-slate-500 italic">Select customer + material combo to load...</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                        <span class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Pending Undelivered Runway</span>
+                        <div class="max-h-72 overflow-y-auto pr-1">
+                            <table class="w-full text-left text-xs">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-700">
+                                        <th class="pb-2">Batch</th>
+                                        <th class="pb-2 text-right">Expiry</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fefoUndeliveredContainer" class="divide-y divide-slate-700 text-slate-200">
+                                    <tr>
+                                        <td colspan="2" class="py-4 text-center text-slate-500 italic">Select customer + material combo to load...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
+
         </div>
+
+        <!-- ===================== TAB 2: UPDATE MASTERDEL ===================== -->
+        <div id="tabMasterdelView" class="hidden">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-900 border-b pb-3 mb-2">Update MasterDel Table</h2>
+                <p class="text-sm text-gray-500 mb-6">Look up a record by Picklist Number, edit its fields, then save the update directly to the <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">masterdel</code> table.</p>
+
+                <div class="flex flex-col md:flex-row gap-3 items-start md:items-end mb-6">
+                    <div class="w-full md:w-64">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Picklist No <span class="text-red-500">*</span></label>
+                        <input type="text" id="mdPicklistSearch" maxlength="10" inputmode="numeric" placeholder="10-digit picklist number" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <button id="mdSearchBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow-sm transition duration-200">
+                        🔍 Search Record
+                    </button>
+                </div>
+
+                <p id="mdSearchMessage" class="text-sm mb-4"></p>
+
+                <div id="mdRecordPanel" class="hidden">
+                    <div id="mdFieldsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
+                    <div class="flex gap-3">
+                        <button id="mdSaveBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-md transition duration-200">
+                            💾 Update Record
+                        </button>
+                        <button id="mdCancelBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2.5 px-5 rounded-lg transition duration-200">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <div id="mdNotFoundPanel" class="hidden">
+                    <p class="text-sm text-gray-600 mb-4">No record exists yet for this Picklist No. You can create one with an initial status below.</p>
+                    <div class="flex flex-col md:flex-row gap-3 items-start md:items-end">
+                        <div class="w-full md:w-64">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Status</label>
+                            <input type="text" id="mdNewStatus" placeholder="e.g., UNDELIVERED" value="UNDELIVERED" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <button id="mdCreateBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow-sm transition duration-200">
+                            ➕ Create Record
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
     </main>
 
     <script>
@@ -172,10 +210,40 @@
             // CRITICAL STEP: Set up listeners immediately so form is responsive even during data loads
             setupEventListeners();
             setupAutocompleteFields();
+            setupTabs();
+            setupMasterdelPanel();
 
             // Fetch lookup data asynchronously
             await populateLookupData();
         });
+
+        // ---------- Tabs ----------
+
+        function setupTabs() {
+            const btnReservation = document.getElementById('tabBtnReservation');
+            const btnMasterdel = document.getElementById('tabBtnMasterdel');
+            const viewReservation = document.getElementById('tabReservationView');
+            const viewMasterdel = document.getElementById('tabMasterdelView');
+
+            function activate(tab) {
+                const reservationActive = tab === 'reservation';
+                viewReservation.classList.toggle('hidden', !reservationActive);
+                viewMasterdel.classList.toggle('hidden', reservationActive);
+
+                btnReservation.classList.toggle('border-blue-600', reservationActive);
+                btnReservation.classList.toggle('text-blue-700', reservationActive);
+                btnReservation.classList.toggle('border-transparent', !reservationActive);
+                btnReservation.classList.toggle('text-gray-500', !reservationActive);
+
+                btnMasterdel.classList.toggle('border-blue-600', !reservationActive);
+                btnMasterdel.classList.toggle('text-blue-700', !reservationActive);
+                btnMasterdel.classList.toggle('border-transparent', reservationActive);
+                btnMasterdel.classList.toggle('text-gray-500', reservationActive);
+            }
+
+            btnReservation.addEventListener('click', () => activate('reservation'));
+            btnMasterdel.addEventListener('click', () => activate('masterdel'));
+        }
 
         function setCurrentTimestamp() {
             const now = new Date();
@@ -224,15 +292,8 @@
                 getData: () => allCustomers,
                 getLabel: c => c.customer_name,
                 getValue: c => c.customer_name,
-                onSelect: () => {
-                    updatePreview();
-                    evalFEFOEngine();
-                },
-                onChange: () => {
-                    updatePreview();
-                    evalFEFOEngine();
-                    validateCustomerHint();
-                }
+                onSelect: () => { evalFEFOEngine(); },
+                onChange: () => { evalFEFOEngine(); validateCustomerHint(); }
             });
 
             setupAutocomplete({
@@ -244,13 +305,11 @@
                 getValue: m => m.material_code,
                 onSelect: (m) => {
                     document.getElementById('materialDesc').value = m ? m.material_description : '';
-                    updatePreview();
                     evalFEFOEngine();
                 },
                 onChange: () => {
                     const code = document.getElementById('materialCode').value.trim();
                     document.getElementById('materialDesc').value = globalMaterialsMap[code] || '';
-                    updatePreview();
                     evalFEFOEngine();
                     validateMaterialHint();
                 }
@@ -326,23 +385,6 @@
             hint.className = "text-xs mt-1 h-4 text-amber-600";
         }
 
-        // ---------- Live Entry Preview (Sales Order / RDD / Customer / Material) ----------
-
-        function updatePreview() {
-            const salesOrder = document.getElementById('salesOrder').value.trim();
-            const rdd = document.getElementById('reqDeliveryDate').value;
-            const customer = document.getElementById('customerName').value.trim();
-            const materialCode = document.getElementById('materialCode').value.trim();
-            const materialDesc = document.getElementById('materialDesc').value.trim();
-
-            document.getElementById('previewSalesOrder').textContent = salesOrder || '--';
-            document.getElementById('previewRDD').textContent = rdd || '--';
-            document.getElementById('previewCustomer').textContent = customer || '--';
-            document.getElementById('previewMaterial').textContent = materialCode
-                ? (materialDesc ? `${materialCode} — ${materialDesc}` : materialCode)
-                : '--';
-        }
-
         // ---------- Standard listeners ----------
 
         function setupEventListeners() {
@@ -351,10 +393,7 @@
                 const hint = document.getElementById('salesOrderHint');
                 hint.textContent = (val && !/^\d{10}$/.test(val)) ? '⚠️ Must be exactly 10 digits' : '';
                 hint.className = "text-xs mt-1 h-4 text-amber-600";
-                updatePreview();
             });
-
-            document.getElementById('reqDeliveryDate').addEventListener('change', updatePreview);
 
             document.getElementById('picklist').addEventListener('input', debounce(async (e) => {
                 const val = e.target.value.trim();
@@ -525,12 +564,141 @@
                     document.getElementById('reservationForm').reset();
                     document.getElementById('materialDesc').value = '';
                     setCurrentTimestamp();
-                    updatePreview();
                     evalFEFOEngine();
                 }
             } catch (catchErr) {
                 console.error("[Thread Exception Exception]", catchErr);
                 alert("❌ Critical Interruption Engine Exception: " + catchErr.message);
+            }
+        }
+
+        // ---------- Tab 2: Update MasterDel ----------
+
+        let mdCurrentPicklist = null;
+        let mdExcludedKeys = ['picklist_no']; // columns shown read-only / excluded from editable inputs
+
+        function setupMasterdelPanel() {
+            document.getElementById('mdSearchBtn').addEventListener('click', searchMasterdelRecord);
+            document.getElementById('mdPicklistSearch').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); searchMasterdelRecord(); }
+            });
+            document.getElementById('mdSaveBtn').addEventListener('click', saveMasterdelRecord);
+            document.getElementById('mdCreateBtn').addEventListener('click', createMasterdelRecord);
+            document.getElementById('mdCancelBtn').addEventListener('click', resetMasterdelPanel);
+        }
+
+        function resetMasterdelPanel() {
+            mdCurrentPicklist = null;
+            document.getElementById('mdRecordPanel').classList.add('hidden');
+            document.getElementById('mdNotFoundPanel').classList.add('hidden');
+            document.getElementById('mdSearchMessage').textContent = '';
+            document.getElementById('mdFieldsContainer').innerHTML = '';
+            document.getElementById('mdPicklistSearch').value = '';
+        }
+
+        async function searchMasterdelRecord() {
+            const picklistNo = document.getElementById('mdPicklistSearch').value.trim();
+            const msg = document.getElementById('mdSearchMessage');
+            document.getElementById('mdRecordPanel').classList.add('hidden');
+            document.getElementById('mdNotFoundPanel').classList.add('hidden');
+
+            if (!/^\d{10}$/.test(picklistNo)) {
+                msg.textContent = "⚠️ Picklist No must be exactly 10 digits.";
+                msg.className = "text-sm mb-4 text-amber-600";
+                return;
+            }
+
+            msg.textContent = "Searching...";
+            msg.className = "text-sm mb-4 text-gray-500";
+
+            try {
+                const { data, error } = await _supabase.from('masterdel').select('*').eq('picklist_no', picklistNo).maybeSingle();
+                if (error) throw error;
+
+                if (!data) {
+                    msg.textContent = "";
+                    mdCurrentPicklist = picklistNo;
+                    document.getElementById('mdNewStatus').value = 'UNDELIVERED';
+                    document.getElementById('mdNotFoundPanel').classList.remove('hidden');
+                    return;
+                }
+
+                mdCurrentPicklist = picklistNo;
+                msg.textContent = `✅ Record found for Picklist No ${picklistNo}.`;
+                msg.className = "text-sm mb-4 text-emerald-600";
+                renderMasterdelFields(data);
+                document.getElementById('mdRecordPanel').classList.remove('hidden');
+            } catch (err) {
+                console.error("[MasterDel Search Exception]", err);
+                msg.textContent = `❌ Search failed: ${err.message || err}`;
+                msg.className = "text-sm mb-4 text-red-600";
+            }
+        }
+
+        function renderMasterdelFields(record) {
+            const container = document.getElementById('mdFieldsContainer');
+            container.innerHTML = '';
+
+            Object.keys(record).forEach(key => {
+                const wrapper = document.createElement('div');
+                const isReadOnly = mdExcludedKeys.includes(key);
+                const label = document.createElement('label');
+                label.className = "block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1";
+                label.textContent = key.replace(/_/g, ' ');
+                wrapper.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.dataset.fieldKey = key;
+                input.value = record[key] === null || record[key] === undefined ? '' : record[key];
+                input.className = isReadOnly
+                    ? "w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-gray-500 cursor-not-allowed"
+                    : "w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none";
+                if (isReadOnly) input.readOnly = true;
+                wrapper.appendChild(input);
+
+                container.appendChild(wrapper);
+            });
+        }
+
+        async function saveMasterdelRecord() {
+            if (!mdCurrentPicklist) return;
+            const msg = document.getElementById('mdSearchMessage');
+            const inputs = document.querySelectorAll('#mdFieldsContainer input[data-field-key]');
+
+            const updates = {};
+            inputs.forEach(input => {
+                const key = input.dataset.fieldKey;
+                if (mdExcludedKeys.includes(key)) return;
+                updates[key] = input.value.trim() === '' ? null : input.value.trim();
+            });
+
+            try {
+                const { error } = await _supabase.from('masterdel').update(updates).eq('picklist_no', mdCurrentPicklist);
+                if (error) throw error;
+                msg.textContent = `✅ Record for Picklist No ${mdCurrentPicklist} updated successfully.`;
+                msg.className = "text-sm mb-4 text-emerald-600";
+            } catch (err) {
+                console.error("[MasterDel Update Exception]", err);
+                alert(`❌ Update failed:\n${err.message || err}`);
+            }
+        }
+
+        async function createMasterdelRecord() {
+            if (!mdCurrentPicklist) return;
+            const status = document.getElementById('mdNewStatus').value.trim() || 'UNDELIVERED';
+            const msg = document.getElementById('mdSearchMessage');
+
+            try {
+                const { error } = await _supabase.from('masterdel').insert([{ picklist_no: mdCurrentPicklist, status }]);
+                if (error) throw error;
+                msg.textContent = `✅ New record created for Picklist No ${mdCurrentPicklist}.`;
+                msg.className = "text-sm mb-4 text-emerald-600";
+                document.getElementById('mdNotFoundPanel').classList.add('hidden');
+                searchMasterdelRecord();
+            } catch (err) {
+                console.error("[MasterDel Create Exception]", err);
+                alert(`❌ Create failed:\n${err.message || err}`);
             }
         }
 

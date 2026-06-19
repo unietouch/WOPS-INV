@@ -601,10 +601,22 @@
                 return;
             }
 
-            // FEFO execution standard: sort by earliest expiration date first
-            records.sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date));
+            // Isolate delivered and undelivered streams
+            const deliveredRecords = records.filter(r => (r.status || '').toUpperCase() === 'DELIVERED');
+            const undeliveredRecords = records.filter(r => (r.status || '').toUpperCase() !== 'DELIVERED');
 
-            records.forEach(r => {
+            let processedRecords = [...undeliveredRecords];
+
+            // Extract exactly one row for delivered items with the absolute latest expiration date
+            if (deliveredRecords.length > 0) {
+                deliveredRecords.sort((a, b) => new Date(b.expiration_date) - new Date(a.expiration_date));
+                processedRecords.push(deliveredRecords[0]);
+            }
+
+            // FEFO execution standard: sort final mixed display by earliest expiration date first
+            processedRecords.sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date));
+
+            processedRecords.forEach(r => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-800/40 border-b border-slate-800/60 transition duration-100";
                 

@@ -138,7 +138,7 @@
                             </thead>
                             <tbody id="fefoInsightsMainBody" class="divide-y divide-slate-800 text-slate-200">
                                 <tr>
-                                    <td colspan="6" class="py-8 text-center text-slate-500 italic">Select a Customer + Material sequence inside the entry module fields to stream inventory analytics...</td>
+                                    <td colspan="6" class="py-8 text-center text-slate-500 italic">Select a Material Code inside the entry module fields to stream inventory analytics...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -569,39 +569,45 @@
 
         // ---------- Upgraded Live FEFO Insights Logic (Right Panel Container) ----------
         async function evalFEFOEngine() {
-            const customer = document.getElementById('customerName').value.trim();
             const material = document.getElementById('materialCode').value.trim();
             const containerBody = document.getElementById('fefoInsightsMainBody');
             const filterMetaBox = document.getElementById('fefoTargetMetaData');
 
-            if (!customer || !material) {
+            // Trigger insight rendering as soon as a Material Code is present
+            if (!material) {
                 filterMetaBox.classList.add('hidden');
+                containerBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-500 italic">
+                            Select a Material Code inside the entry module fields to stream inventory analytics...
+                        </td>
+                    </tr>`;
                 return;
             }
 
-            // Expose filtering metadata info blocks
+            // Expose filtering metadata info blocks for the selected item
             filterMetaBox.classList.remove('hidden');
-            document.getElementById('fefoFilterItem').textContent = `${material} ➡️ ${customer}`;
+            document.getElementById('fefoFilterItem').textContent = `Material: ${material}`;
 
-            // Fetch records from database
+            // Fetch ALL records for this material globally to build an accurate FEFO pipeline
             const { data: records, error } = await _supabase
                 .from('reservations')
                 .select('sales_order, required_delivery_date, customer_name, batch_code, qty, status, expiration_date')
-                .eq('customer_name', customer)
                 .eq('material_code', material);
 
             if (error) {
                 console.error("[FEFO Engine Query Failure]", error);
+                containerBody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-red-400 font-mono">Error loading records: ${error.message}</td></tr>`;
                 return;
             }
 
             containerBody.innerHTML = "";
             if (!records || records.length === 0) {
-                containerBody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 italic">No existing delivery reservation profiles found matching this combination.</td></tr>`;
+                containerBody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 italic">No existing delivery reservation profiles found matching this material code.</td></tr>`;
                 return;
             }
 
-            // Segregate delivered and undelivered rows[cite: 1]
+            // Segregate delivered and undelivered rows across the system
             const deliveredRecords = records.filter(r => (r.status || '').toUpperCase() === 'DELIVERED');
             const undeliveredRecords = records.filter(r => (r.status || '').toUpperCase() !== 'DELIVERED');
 
@@ -616,41 +622,41 @@
                     : `<span class="bg-amber-950 text-amber-400 font-bold border border-amber-800 text-[9px] px-1.5 py-0.5 rounded">UNDEL</span>`;
 
                 tr.innerHTML = `
-                    <td class="py-2.5 font-mono text-slate-300">${r.sales_order}</td>
-                    <td class="py-2.5 text-slate-400 whitespace-nowrap">${r.required_delivery_date}</td>
-                    <td class="py-2.5 font-medium max-w-[120px] truncate text-slate-300" title="${r.customer_name}">${r.customer_name}</td>
-                    <td class="py-2.5 font-mono text-blue-300 font-semibold" title="Expires: ${r.expiration_date}">${r.batch_code}</td>
-                    <td class="py-2.5 text-right font-bold text-slate-100">${parseFloat(r.qty).toLocaleString()}</td>
+                    <td class="py-2.5 font-mono text-slate-300">${r.sales_order || '--'}</td>
+                    <td class="py-2.5 text-slate-400 whitespace-nowrap">${r.required_delivery_date || '--'}</td>
+                    <td class="py-2.5 font-medium max-w-[120px] truncate text-slate-300" title="${r.customer_name}">${r.customer_name || '--'}</td>
+                    <td class="py-2.5 font-mono text-blue-300 font-semibold" title="Expires: ${r.expiration_date}">${r.batch_code || '--'}</td>
+                    <td class="py-2.5 text-right font-bold text-slate-100">${r.qty ? parseFloat(r.qty).toLocaleString() : '0'}</td>
                     <td class="py-2.5 text-center">${statusBadge}</td>
                 `;
                 containerBody.appendChild(tr);
             }
 
-            // 1. Render Section Header: Latest Delivered Batch[cite: 1]
+            // 1. Render Section Header: Latest Delivered Batch
             const delHeaderRow = document.createElement('tr');
             delHeaderRow.className = "bg-slate-950/80 border-b border-slate-800";
             delHeaderRow.innerHTML = `<td colspan="6" class="py-2 px-2 text-[10px] uppercase font-mono font-bold text-emerald-400 tracking-wider">⏱️ Latest Delivered Batch</td>`;
             containerBody.appendChild(delHeaderRow);
 
             if (deliveredRecords.length > 0) {
-                // Sort delivered descending by expiration date to obtain furthest out latest window[cite: 1]
+                // Sort delivered descending by expiration date to obtain furthest out latest window
                 deliveredRecords.sort((a, b) => new Date(b.expiration_date) - new Date(a.expiration_date));
-                appendRecordRow(deliveredRecords[0]); // Output only the top row record[cite: 1]
+                appendRecordRow(deliveredRecords[0]); // Output only the top row record
             } else {
                 const emptyDelRow = document.createElement('tr');
                 emptyDelRow.className = "border-b border-slate-800/40";
-                emptyDelRow.innerHTML = `<td colspan="6" class="py-3 text-center text-slate-500 italic text-[11px]">No active delivered records found.</td>`;
+                emptyDelRow.innerHTML = `<td colspan="6" class="py-3 text-center text-slate-500 italic text-[11px]">No active delivered records found for this item.</td>`;
                 containerBody.appendChild(emptyDelRow);
             }
 
-            // 2. Render Section Header: Undelivered Batches Allocation Queue[cite: 1]
+            // 2. Render Section Header: Undelivered Batches Allocation Queue
             const undelHeaderRow = document.createElement('tr');
             undelHeaderRow.className = "bg-slate-950/80 border-b border-slate-800";
             undelHeaderRow.innerHTML = `<td colspan="6" class="py-2 px-2 text-[10px] uppercase font-mono font-bold text-amber-400 tracking-wider">📦 Undelivered Allocation Queue</td>`;
-            containerBody.appendChild(undHeaderRow);
+            containerBody.appendChild(undelHeaderRow);
 
             if (undeliveredRecords.length > 0) {
-                // Standard FEFO Sorting Metric: Earliest Expiration Date First[cite: 1]
+                // Standard FEFO Sorting Metric: Earliest Expiration Date First
                 undeliveredRecords.sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date));
                 undeliveredRecords.forEach(r => appendRecordRow(r));
             } else {

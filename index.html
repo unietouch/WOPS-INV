@@ -149,10 +149,30 @@
             document.getElementById('dateOfEntry').value = now.toLocaleString();
         }
 
+        // Dropdown populator routing pulling from separated tables architecture 
         async function populateLookupDropdowns() {
             try {
-                const { data: customerData, error: custErr } = await _supabase.from('customers_db').select('customer_name');
-                if (custErr) throw custErr;
+                // 1. Fetch ALL Customers (Looping defensively through the 1000 limit)
+                let customerData = [];
+                let cStart = 0;
+                let cLimit = 1000;
+                let cHasMore = true;
+
+                while (cHasMore) {
+                    const { data, error } = await _supabase
+                        .from('customers_db')
+                        .select('customer_name')
+                        .range(cStart, cStart + cLimit - 1);
+                    
+                    if (error) throw error;
+                    customerData = customerData.concat(data);
+                    
+                    if (data.length < cLimit) {
+                        cHasMore = false;
+                    } else {
+                        cStart += cLimit;
+                    }
+                }
                 
                 const customerSelect = document.getElementById('customerName');
                 customerData.forEach(c => {
@@ -162,8 +182,27 @@
                     customerSelect.appendChild(opt);
                 });
 
-                const { data: materialData, error: matErr } = await _supabase.from('materials_db').select('material_code, material_description');
-                if (matErr) throw matErr;
+                // 2. Fetch ALL Materials (Looping systematically through the 1000 limit - Handles all 3,888+ entries seamlessly)
+                let materialData = [];
+                let mStart = 0;
+                let mLimit = 1000;
+                let mHasMore = true;
+
+                while (mHasMore) {
+                    const { data, error } = await _supabase
+                        .from('materials_db')
+                        .select('material_code, material_description')
+                        .range(mStart, mStart + mLimit - 1);
+                    
+                    if (error) throw error;
+                    materialData = materialData.concat(data);
+                    
+                    if (data.length < mLimit) {
+                        mHasMore = false;
+                    } else {
+                        mStart += mLimit;
+                    }
+                }
 
                 const materialSelect = document.getElementById('materialCode');
                 materialData.forEach(m => {
@@ -173,6 +212,8 @@
                     opt.textContent = m.material_code;
                     materialSelect.appendChild(opt);
                 });
+
+                console.log(`[System Debug] Auto-Pagination Successful! Loaded ${customerData.length} customers and ${materialData.length} total material matrix entries.`);
             } catch (err) {
                 console.error("[Fatal Error Exception]", err.message);
                 alert("Core Sync Error: Failed to fetch base data parameters.");
@@ -324,10 +365,9 @@
 
             const salesOrder = document.getElementById('salesOrder').value.trim();
             const picklist = document.getElementById('picklist').value.trim();
-            const whseOrder = document.getElementById('whseOrder').value.trim(); // Free text field string
+            const whseOrder = document.getElementById('whseOrder').value.trim();
             const expirationDate = document.getElementById('expirationDate').value;
 
-            // Strict validations maintained for Sales Order and Picklist only
             if (!/^\d{10}$/.test(salesOrder)) {
                 alert("Constraint Error: Sales Order pattern length exception. Must be exactly 10 numerical digits.");
                 return;
@@ -351,7 +391,7 @@
                 qty: parseFloat(document.getElementById('qty').value),
                 batch_code: document.getElementById('batchCode').value.trim(),
                 expiration_date: expirationDate,
-                whse_order: whseOrder, // Submitted safely as a standard string payload parameter
+                whse_order: whseOrder,
                 status: document.getElementById('status').value
             };
 

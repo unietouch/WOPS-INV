@@ -86,7 +86,7 @@
 
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Warehouse Order <span class="text-red-500">*</span></label>
-                    <input type="text" id="whseOrder" placeholder="Must be exactly 8, 10, or 11 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+                    <input type="text" id="whseOrder" placeholder="Enter warehouse order information (no format restrictions)" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
                 </div>
 
                 <div class="pt-4">
@@ -131,15 +131,12 @@
     </main>
 
     <script>
-        // Supabase Infrastructure Network Connection Protocols
         const SUPABASE_URL = "https://husvyiacumxqfxglibwx.supabase.co";
         const SUPABASE_KEY = "sb_publishable_Mo_b_HNFI83ONCgSneWheg_H161x1MN";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Global Buffer Object Map
         let globalMaterialsMap = {};
 
-        // Application Lifecyle Bootloader Initiation Engine Routing
         window.addEventListener('DOMContentLoaded', async () => {
             console.log("[System Debug] Executing Application Core UI Initialization Sequence...");
             setCurrentTimestamp();
@@ -152,10 +149,8 @@
             document.getElementById('dateOfEntry').value = now.toLocaleString();
         }
 
-        // Dropdown populator routing pulling from separated tables architecture 
         async function populateLookupDropdowns() {
             try {
-                // Fetch Separate Customers List
                 const { data: customerData, error: custErr } = await _supabase.from('customers_db').select('customer_name');
                 if (custErr) throw custErr;
                 
@@ -167,45 +162,37 @@
                     customerSelect.appendChild(opt);
                 });
 
-                // Fetch Separate Materials List
                 const { data: materialData, error: matErr } = await _supabase.from('materials_db').select('material_code, material_description');
                 if (matErr) throw matErr;
 
                 const materialSelect = document.getElementById('materialCode');
                 materialData.forEach(m => {
-                    globalMaterialsMap[m.material_code] = m.material_description; // Store description map cache reference
+                    globalMaterialsMap[m.material_code] = m.material_description;
                     let opt = document.createElement('option');
                     opt.value = m.material_code;
                     opt.textContent = m.material_code;
                     materialSelect.appendChild(opt);
                 });
-
-                console.log("[System Debug] Successfully connected and mapped lookup indexes cleanly from independent master tables.");
             } catch (err) {
-                console.error("[Fatal Error Exception] Master sequence fetching failed:", err.message);
-                alert("Core Sync Error: Failed to fetch base data parameters from Supabase. Verify table states.");
+                console.error("[Fatal Error Exception]", err.message);
+                alert("Core Sync Error: Failed to fetch base data parameters.");
             }
         }
 
         function setupEventListeners() {
-            // Material Dropdown change handler mapping lookups
             document.getElementById('materialCode').addEventListener('change', (e) => {
                 const code = e.target.value;
                 document.getElementById('materialDesc').value = globalMaterialsMap[code] || "";
                 evalFEFOEngine();
             });
 
-            // Customer selection modification update listener
             document.getElementById('customerName').addEventListener('change', evalFEFOEngine);
 
-            // Real-time Picklist lookups parsing against masterdel sequence rules
             document.getElementById('picklist').addEventListener('input', debounce(async (e) => {
                 const val = e.target.value.trim();
                 const statusInput = document.getElementById('status');
                 
-                // Assert precisely formed numeric expressions to run lookup optimizations
                 if (/^\d{10}$/.test(val)) {
-                    console.log(`[System Debug] Querying status map sequence matching picklist target: ${val}`);
                     const { data, error } = await _supabase.from('masterdel').select('status').eq('picklist_no', val).maybeSingle();
                     if (data && data.status && data.status.trim() !== "") {
                         statusInput.value = data.status.toUpperCase();
@@ -217,17 +204,14 @@
                 }
             }, 350));
 
-            // Batch Code conversion evaluation dynamic calculation engine
             document.getElementById('batchCode').addEventListener('input', (e) => {
                 const calculatedDate = parseBatchExpirationDate(e.target.value.trim());
                 document.getElementById('expirationDate').value = calculatedDate;
             });
 
-            // Form Submit Router Interception Block 
             document.getElementById('reservationForm').addEventListener('submit', handleFormSubmission);
         }
 
-        // Custom Expression Logic Engine translating your nested VLOOKUP/IF formula logic
         function parseBatchExpirationDate(batchCode) {
             if (!batchCode) return "";
             
@@ -243,7 +227,7 @@
                     
                     if (mmStr.length === 2 && ddStr.length === 2 && yyStr.length === 2) {
                         let year = parseInt(yyStr) + 2000;
-                        let month = parseInt(mmStr) - 1; // 0-Indexed compensation rule
+                        let month = parseInt(mmStr) - 1;
                         let day = parseInt(ddStr);
                         return formatUIOutputDate(new Date(year, month, day));
                     }
@@ -267,9 +251,9 @@
                     }
                 }
             } catch (e) {
-                console.error("[Logic Parse Error Stack Exception] Expiration conversion parsing failed:", e);
+                console.error("Expiration conversion parsing failed:", e);
             }
-            return ""; // Default blank baseline response
+            return "";
         }
 
         function formatUIOutputDate(dateObj) {
@@ -278,14 +262,12 @@
             return `${monthsText[dateObj.getMonth()]}-${String(dateObj.getDate()).padStart(2, '0')}-${dateObj.getFullYear()}`;
         }
 
-        // Real-Time Core FEFO Metrics Visualizer Compute Loop
         async function evalFEFOEngine() {
             const customer = document.getElementById('customerName').value;
             const material = document.getElementById('materialCode').value;
 
             if (!customer || !material) return;
 
-            // Fetch transactional rows intersecting unique criteria 
             const { data: records, error } = await _supabase
                 .from('reservations')
                 .select('batch_code, expiration_date, status')
@@ -293,7 +275,7 @@
                 .eq('material_code', material);
 
             if (error) {
-                console.error("[FEFO Engine Query Processing Failure]", error);
+                console.error(error);
                 return;
             }
 
@@ -309,7 +291,6 @@
                 }
             });
 
-            // Process Pane A View Setup (Latest Expiration Date tracking logic rule)
             if (deliveredRecords.length > 0) {
                 deliveredRecords.sort((a, b) => new Date(b.expiration_date) - new Date(a.expiration_date));
                 const latest = deliveredRecords[0];
@@ -320,7 +301,6 @@
                 document.getElementById('fefoLatestExpiry').textContent = "Expiry: No deliveries recorded";
             }
 
-            // Process Pane B View Setup (Pending remaining sequence queues)
             const tbody = document.getElementById('fefoUndeliveredContainer');
             tbody.innerHTML = "";
 
@@ -339,16 +319,15 @@
             }
         }
 
-        // Integrity Assertions & Payload Dispatch Submission Lifecycle Flow Routine
         async function handleFormSubmission(e) {
             e.preventDefault();
 
             const salesOrder = document.getElementById('salesOrder').value.trim();
             const picklist = document.getElementById('picklist').value.trim();
-            const whseOrder = document.getElementById('whseOrder').value.trim();
+            const whseOrder = document.getElementById('whseOrder').value.trim(); // Free text field string
             const expirationDate = document.getElementById('expirationDate').value;
 
-            // Enforce explicit structural character length constraints
+            // Strict validations maintained for Sales Order and Picklist only
             if (!/^\d{10}$/.test(salesOrder)) {
                 alert("Constraint Error: Sales Order pattern length exception. Must be exactly 10 numerical digits.");
                 return;
@@ -357,12 +336,8 @@
                 alert("Constraint Error: Picklist pattern length exception. Must be exactly 10 numerical digits.");
                 return;
             }
-            if (!/^\d{8}$|^\d{10}$|^\d{11}$/.test(whseOrder)) {
-                alert("Constraint Error: Warehouse Order configuration parameters out of scope. Allowed values: exactly 8, 10, or 11 digits.");
-                return;
-            }
             if (!expirationDate) {
-                alert("Constraint Error: Unresolved Expiration Matrix calculation array. Revise the input structure format of your Batch Code field configuration.");
+                alert("Constraint Error: Unresolved Expiration Matrix calculation array. Revise Batch Code formatting.");
                 return;
             }
 
@@ -376,16 +351,14 @@
                 qty: parseFloat(document.getElementById('qty').value),
                 batch_code: document.getElementById('batchCode').value.trim(),
                 expiration_date: expirationDate,
-                whse_order: whseOrder,
+                whse_order: whseOrder, // Submitted safely as a standard string payload parameter
                 status: document.getElementById('status').value
             };
-
-            console.log("[System Debug] Form validation parameters verified. Writing payload packet to reservations table sequence:", payload);
 
             const { error } = await _supabase.from('reservations').insert([payload]);
 
             if (error) {
-                console.error("[Database Operations Commit Write Exception]", error);
+                console.error(error);
                 alert("Storage write failure encountered: " + error.message);
             } else {
                 alert("Database Reservation Record committed successfully.");

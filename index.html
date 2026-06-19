@@ -17,12 +17,12 @@
     </header>
 
     <main class="max-w-7xl mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h2 class="text-xl font-bold text-gray-900 border-b pb-3 mb-6">Reservation Record Entry</h2>
-            
+
             <form id="reservationForm" class="space-y-5" novalidate>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Date of Entry (Auto)</label>
@@ -37,30 +37,33 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Sales Order <span class="text-red-500">*</span></label>
-                        <input type="text" id="salesOrder" maxlength="10" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <input type="text" id="salesOrder" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <p id="salesOrderHint" class="text-xs mt-1 h-4"></p>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Picklist <span class="text-red-500">*</span></label>
-                        <input type="text" id="picklist" maxlength="10" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <input type="text" id="picklist" maxlength="10" inputmode="numeric" placeholder="Must be exactly 10 digits" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Req. Delivery Date <span class="text-red-500">*</span></label>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Req. Delivery Date (RDD) <span class="text-red-500">*</span></label>
                         <input type="date" id="reqDeliveryDate" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     </div>
-                    <div>
+
+                    <div class="relative">
                         <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Customer Name <span class="text-red-500">*</span></label>
-                        <select id="customerName" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
-                            <option value="">-- Select Customer --</option>
-                        </select>
+                        <input type="text" id="customerName" autocomplete="off" placeholder="Type to search customers..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <div id="customerSuggestions" class="hidden absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                        <p id="customerHint" class="text-xs mt-1 h-4"></p>
                     </div>
-                    <div>
+
+                    <div class="relative">
                         <label class="block text-xs font-semibold uppercase tracking-wider text-gray-700 mb-1">Material Code <span class="text-red-500">*</span></label>
-                        <select id="materialCode" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
-                            <option value="">-- Select Material --</option>
-                        </select>
+                        <input type="text" id="materialCode" autocomplete="off" placeholder="Type to search materials..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <div id="materialSuggestions" class="hidden absolute z-30 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                        <p id="materialHint" class="text-xs mt-1 h-4"></p>
                     </div>
                 </div>
 
@@ -98,10 +101,33 @@
         </div>
 
         <div class="space-y-6">
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-gray-500 border-b pb-2 mb-3">📋 Live Entry Preview</h2>
+                <dl class="text-sm divide-y divide-gray-100">
+                    <div class="flex justify-between py-2">
+                        <dt class="text-gray-500">Sales Order</dt>
+                        <dd id="previewSalesOrder" class="font-mono font-semibold text-gray-800">--</dd>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <dt class="text-gray-500">RDD</dt>
+                        <dd id="previewRDD" class="font-mono font-semibold text-gray-800">--</dd>
+                    </div>
+                    <div class="flex justify-between py-2 gap-3">
+                        <dt class="text-gray-500 shrink-0">Customer</dt>
+                        <dd id="previewCustomer" class="font-semibold text-gray-800 text-right truncate">--</dd>
+                    </div>
+                    <div class="flex justify-between py-2 gap-3">
+                        <dt class="text-gray-500 shrink-0">Material</dt>
+                        <dd id="previewMaterial" class="font-semibold text-gray-800 text-right truncate">--</dd>
+                    </div>
+                </dl>
+            </div>
+
             <div class="bg-slate-900 text-white p-6 rounded-xl shadow-md border border-slate-800">
                 <h2 class="text-lg font-bold border-b border-slate-800 pb-2 mb-4 tracking-wide text-blue-400">📊 Live FEFO Insights</h2>
                 <p class="text-xs text-slate-400 mb-6">Select a combined Customer and Material item sequence to evaluate live historical and pending profiles.</p>
-                
+
                 <div class="mb-6 p-4 bg-slate-800 rounded-lg border border-slate-700">
                     <span class="block text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Latest Delivered Batch</span>
                     <div id="fefoLatestBatch" class="text-xl font-mono font-bold text-emerald-400">--</div>
@@ -135,17 +161,20 @@
         const SUPABASE_KEY = "sb_publishable_Mo_b_HNFI83ONCgSneWheg_H161x1MN";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let globalMaterialsMap = {};
+        let globalMaterialsMap = {};   // code -> description
+        let allCustomers = [];         // [{customer_name}]
+        let allMaterials = [];         // [{material_code, material_description}]
 
         window.addEventListener('DOMContentLoaded', async () => {
             console.log("[System Debug] Executing Application Core UI Initialization Sequence...");
             setCurrentTimestamp();
-            
+
             // CRITICAL STEP: Set up listeners immediately so form is responsive even during data loads
             setupEventListeners();
-            
-            // Fetch drop-down items asynchronously
-            await populateLookupDropdowns();
+            setupAutocompleteFields();
+
+            // Fetch lookup data asynchronously
+            await populateLookupData();
         });
 
         function setCurrentTimestamp() {
@@ -153,7 +182,7 @@
             document.getElementById('dateOfEntry').value = now.toLocaleString();
         }
 
-        async function populateLookupDropdowns() {
+        async function populateLookupData() {
             try {
                 // Fetch Customers
                 let customerData = [];
@@ -164,14 +193,7 @@
                     customerData = customerData.concat(data);
                     if (data.length < cLimit) cHasMore = false; else cStart += cLimit;
                 }
-                
-                const customerSelect = document.getElementById('customerName');
-                customerData.forEach(c => {
-                    let opt = document.createElement('option');
-                    opt.value = c.customer_name;
-                    opt.textContent = c.customer_name;
-                    customerSelect.appendChild(opt);
-                });
+                allCustomers = customerData;
 
                 // Fetch Materials (Handles all 3,888 entries cleanly via systematic pagination loops)
                 let materialData = [];
@@ -182,36 +204,162 @@
                     materialData = materialData.concat(data);
                     if (data.length < mLimit) mHasMore = false; else mStart += mLimit;
                 }
+                allMaterials = materialData;
+                materialData.forEach(m => { globalMaterialsMap[m.material_code] = m.material_description; });
 
-                const materialSelect = document.getElementById('materialCode');
-                materialData.forEach(m => {
-                    globalMaterialsMap[m.material_code] = m.material_description;
-                    let opt = document.createElement('option');
-                    opt.value = m.material_code;
-                    opt.textContent = m.material_code;
-                    materialSelect.appendChild(opt);
-                });
-
-                console.log(`[Database Connection Success] Dropdowns active. Customers loaded: ${customerData.length}, Materials loaded: ${materialData.length}`);
+                console.log(`[Database Connection Success] Lookups active. Customers loaded: ${allCustomers.length}, Materials loaded: ${allMaterials.length}`);
             } catch (err) {
                 console.error("[Data Import Exception Log]", err);
-                alert(`Data Sync Notice: Issue populating dropdown arrays from backend.\nReason: ${err.message || err}`);
+                alert(`Data Sync Notice: Issue populating lookup arrays from backend.\nReason: ${err.message || err}`);
             }
         }
 
-        function setupEventListeners() {
-            document.getElementById('materialCode').addEventListener('change', (e) => {
-                const code = e.target.value;
-                document.getElementById('materialDesc').value = globalMaterialsMap[code] || "";
-                evalFEFOEngine();
+        // ---------- Autocomplete (Customer & Material) ----------
+
+        function setupAutocompleteFields() {
+            setupAutocomplete({
+                inputId: 'customerName',
+                boxId: 'customerSuggestions',
+                hintId: 'customerHint',
+                getData: () => allCustomers,
+                getLabel: c => c.customer_name,
+                getValue: c => c.customer_name,
+                onSelect: () => {
+                    updatePreview();
+                    evalFEFOEngine();
+                },
+                onChange: () => {
+                    updatePreview();
+                    evalFEFOEngine();
+                    validateCustomerHint();
+                }
             });
 
-            document.getElementById('customerName').addEventListener('change', evalFEFOEngine);
+            setupAutocomplete({
+                inputId: 'materialCode',
+                boxId: 'materialSuggestions',
+                hintId: 'materialHint',
+                getData: () => allMaterials,
+                getLabel: m => `${m.material_code} — ${m.material_description}`,
+                getValue: m => m.material_code,
+                onSelect: (m) => {
+                    document.getElementById('materialDesc').value = m ? m.material_description : '';
+                    updatePreview();
+                    evalFEFOEngine();
+                },
+                onChange: () => {
+                    const code = document.getElementById('materialCode').value.trim();
+                    document.getElementById('materialDesc').value = globalMaterialsMap[code] || '';
+                    updatePreview();
+                    evalFEFOEngine();
+                    validateMaterialHint();
+                }
+            });
+        }
+
+        function setupAutocomplete({ inputId, boxId, hintId, getData, getLabel, getValue, onSelect, onChange }) {
+            const input = document.getElementById(inputId);
+            const box = document.getElementById(boxId);
+
+            function renderSuggestions() {
+                const query = input.value.trim().toLowerCase();
+                box.innerHTML = '';
+                if (!query) {
+                    box.classList.add('hidden');
+                    return;
+                }
+                const data = getData();
+                const matches = data.filter(item => getLabel(item).toLowerCase().includes(query)).slice(0, 8);
+
+                if (matches.length === 0) {
+                    box.innerHTML = `<div class="px-3 py-2 text-sm text-gray-400 italic">No matches found</div>`;
+                    box.classList.remove('hidden');
+                    return;
+                }
+
+                matches.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0";
+                    row.textContent = getLabel(item);
+                    // mousedown fires before the input's blur event, so the click registers
+                    row.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        input.value = getValue(item);
+                        box.classList.add('hidden');
+                        if (hintId) document.getElementById(hintId).textContent = '';
+                        onSelect(item);
+                    });
+                    box.appendChild(row);
+                });
+                box.classList.remove('hidden');
+            }
+
+            input.addEventListener('input', () => {
+                renderSuggestions();
+                onChange();
+            });
+
+            input.addEventListener('focus', () => {
+                if (input.value.trim()) renderSuggestions();
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(() => box.classList.add('hidden'), 150);
+            });
+        }
+
+        function validateCustomerHint() {
+            const val = document.getElementById('customerName').value.trim();
+            const hint = document.getElementById('customerHint');
+            if (!val) { hint.textContent = ''; return; }
+            const exists = allCustomers.some(c => c.customer_name === val);
+            hint.textContent = exists ? '' : '⚠️ No exact match in customer list yet';
+            hint.className = "text-xs mt-1 h-4 text-amber-600";
+        }
+
+        function validateMaterialHint() {
+            const val = document.getElementById('materialCode').value.trim();
+            const hint = document.getElementById('materialHint');
+            if (!val) { hint.textContent = ''; return; }
+            const exists = Object.prototype.hasOwnProperty.call(globalMaterialsMap, val);
+            hint.textContent = exists ? '' : '⚠️ No exact match in material list yet';
+            hint.className = "text-xs mt-1 h-4 text-amber-600";
+        }
+
+        // ---------- Live Entry Preview (Sales Order / RDD / Customer / Material) ----------
+
+        function updatePreview() {
+            const salesOrder = document.getElementById('salesOrder').value.trim();
+            const rdd = document.getElementById('reqDeliveryDate').value;
+            const customer = document.getElementById('customerName').value.trim();
+            const materialCode = document.getElementById('materialCode').value.trim();
+            const materialDesc = document.getElementById('materialDesc').value.trim();
+
+            document.getElementById('previewSalesOrder').textContent = salesOrder || '--';
+            document.getElementById('previewRDD').textContent = rdd || '--';
+            document.getElementById('previewCustomer').textContent = customer || '--';
+            document.getElementById('previewMaterial').textContent = materialCode
+                ? (materialDesc ? `${materialCode} — ${materialDesc}` : materialCode)
+                : '--';
+        }
+
+        // ---------- Standard listeners ----------
+
+        function setupEventListeners() {
+            document.getElementById('salesOrder').addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                const hint = document.getElementById('salesOrderHint');
+                hint.textContent = (val && !/^\d{10}$/.test(val)) ? '⚠️ Must be exactly 10 digits' : '';
+                hint.className = "text-xs mt-1 h-4 text-amber-600";
+                updatePreview();
+            });
+
+            document.getElementById('reqDeliveryDate').addEventListener('change', updatePreview);
 
             document.getElementById('picklist').addEventListener('input', debounce(async (e) => {
                 const val = e.target.value.trim();
                 const statusInput = document.getElementById('status');
-                
+
                 if (/^\d{10}$/.test(val)) {
                     const { data, error } = await _supabase.from('masterdel').select('status').eq('picklist_no', val).maybeSingle();
                     if (data && data.status && data.status.trim() !== "") {
@@ -263,8 +411,8 @@
         }
 
         async function evalFEFOEngine() {
-            const customer = document.getElementById('customerName').value;
-            const material = document.getElementById('materialCode').value;
+            const customer = document.getElementById('customerName').value.trim();
+            const material = document.getElementById('materialCode').value.trim();
             if (!customer || !material) return;
 
             const { data: records, error } = await _supabase.from('reservations').select('batch_code, expiration_date, status').eq('customer_name', customer).eq('material_code', material);
@@ -306,9 +454,9 @@
             const salesOrder = document.getElementById('salesOrder').value.trim();
             const picklist = document.getElementById('picklist').value.trim();
             const reqDeliveryDate = document.getElementById('reqDeliveryDate').value;
-            const customerName = document.getElementById('customerName').value;
-            const materialCode = document.getElementById('materialCode').value;
-            const materialDescription = document.getElementById('materialDesc').value;
+            const customerName = document.getElementById('customerName').value.trim();
+            const materialCode = document.getElementById('materialCode').value.trim();
+            const materialDescription = document.getElementById('materialDesc').value.trim();
             const qtyStr = document.getElementById('qty').value;
             const batchCode = document.getElementById('batchCode').value.trim();
             const expirationDate = document.getElementById('expirationDate').value;
@@ -321,17 +469,29 @@
             }
 
             // 2. Pattern Length Controls maintained for tracking values
-            if (!/^\d{10}$/.test(salesOrder)) { 
-                alert("⚠️ Input Formatting Error:\nSales Order field must be exactly 10 raw digits."); 
-                return; 
+            if (!/^\d{10}$/.test(salesOrder)) {
+                alert("⚠️ Input Formatting Error:\nSales Order field must be exactly 10 raw digits.");
+                return;
             }
-            if (!/^\d{10}$/.test(picklist)) { 
-                alert("⚠️ Input Formatting Error:\nPicklist field must be exactly 10 raw digits."); 
-                return; 
+            if (!/^\d{10}$/.test(picklist)) {
+                alert("⚠️ Input Formatting Error:\nPicklist field must be exactly 10 raw digits.");
+                return;
             }
-            if (!expirationDate) { 
-                alert("⚠️ Batch Code Error:\nCould not process an Expiration Date. Verify that your batch syntax prefix is valid."); 
-                return; 
+            if (!expirationDate) {
+                alert("⚠️ Batch Code Error:\nCould not process an Expiration Date. Verify that your batch syntax prefix is valid.");
+                return;
+            }
+
+            // 3. Free-typed Customer / Material must match a known lookup entry (protects FK integrity)
+            const customerValid = allCustomers.some(c => c.customer_name === customerName);
+            if (!customerValid) {
+                alert("⚠️ Customer Not Recognized:\nPlease select a Customer from the suggestion list that appears as you type.");
+                return;
+            }
+            const materialValid = Object.prototype.hasOwnProperty.call(globalMaterialsMap, materialCode);
+            if (!materialValid) {
+                alert("⚠️ Material Not Recognized:\nPlease select a Material Code from the suggestion list that appears as you type.");
+                return;
             }
 
             const payload = {
@@ -363,7 +523,9 @@
                 } else {
                     alert("✅ Success!\nYour Reservation Record has been committed and saved into Supabase successfully.");
                     document.getElementById('reservationForm').reset();
+                    document.getElementById('materialDesc').value = '';
                     setCurrentTimestamp();
+                    updatePreview();
                     evalFEFOEngine();
                 }
             } catch (catchErr) {

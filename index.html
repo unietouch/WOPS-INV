@@ -50,8 +50,8 @@
     <header class="bg-blue-800 text-white shadow-md px-6 py-4">
         <div class="max-w-[1600px] mx-auto flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">WOPS - PBD Monitoring </h1>
-                <p class="text-xs text-blue-200 mt-0.5">FEFO Monitoring</p>
+                <h1 class="text-2xl font-bold tracking-tight">Logistics Hub: Fulfillment Network</h1>
+                <p class="text-xs text-blue-200 mt-0.5">Enterprise Allocation & FEFO Validation Ledger</p>
             </div>
             <div class="flex items-center gap-3">
                 <span class="text-sm bg-blue-900 px-3 py-1 rounded-full border border-blue-500 font-mono">V2.5 Stable Operational Engine</span>
@@ -191,7 +191,7 @@
         <div id="tabMasterDBView" class="tab-content hidden transition-all duration-150">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 class="text-xl font-bold text-slate-900 border-b pb-3 mb-2">Materials Master Registry (`materials_db`)</h2>
-                <p class="text-sm text-slate-500 mb-6">ALL INPUTS SHOULD BE IN CAPITAL LETTERS.</p>
+                <p class="text-sm text-slate-500 mb-6">Add new system inventory items or update existing descriptions via the unified index key upsert process.</p>
                 
                 <form id="masterDBForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
                     <div>
@@ -229,7 +229,7 @@
         <div id="tabCustomerDBView" class="tab-content hidden transition-all duration-150">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 class="text-xl font-bold text-slate-900 border-b pb-3 mb-2">Customer Account Index (`customers_db`)</h2>
-                <p class="text-sm text-slate-500 mb-6">ALL INPUTS ARE CAPITAL LETTERS NO SPECIAL CHARACTERS LIKE ". , ' - * $ % @ + = .</p>
+                <p class="text-sm text-slate-500 mb-6">Register logistics accounts to support internal cascading referential key configurations.</p>
 
                 <form id="customerDBForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
                     <div>
@@ -264,7 +264,7 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 mb-4 gap-4">
                     <div>
                         <h2 class="text-xl font-bold text-slate-900">All Reservations Transactional Ledger</h2>
-                        <p class="text-sm text-slate-500 mt-0.5">2026 Records.</p>
+                        <p class="text-sm text-slate-500 mt-0.5">Comprehensive structural log stream tracking warehouse operations.</p>
                     </div>
                 </div>
 
@@ -310,6 +310,9 @@
                     </button>
                     <button id="exportUndeliveredBtn" class="border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-2 rounded-lg transition">
                         ⬇️ Export Undelivered
+                    </button>
+                    <button id="exportDeliveredBtn" class="border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold px-3 py-2 rounded-lg transition">
+                        ⬇️ Export Delivered
                     </button>
                     <button id="refreshLedgerBtn" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm md:ml-auto">
                         🔄 Refresh Data
@@ -1389,12 +1392,12 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
             return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
         }
 
-        // Fetches every UNDELIVERED reservation record (paged through in
-        // batches of 1000 to get around Supabase's per-request row cap)
-        // and exports them all to CSV, regardless of the ledger's current
-        // filters, search term, or page.
-        async function exportUndeliveredRecords() {
-            const btn = document.getElementById('exportUndeliveredBtn');
+        // Fetches every reservation record matching the given status (paged
+        // through in batches of 1000 to get around Supabase's per-request
+        // row cap) and exports them all to CSV, regardless of the ledger's
+        // current filters, search term, or page.
+        async function exportRecordsByStatus(status, btnId) {
+            const btn = document.getElementById(btnId);
             const originalText = btn.innerHTML;
             btn.disabled = true;
             btn.textContent = '⏳ Exporting...';
@@ -1409,7 +1412,7 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
                     const { data, error } = await _supabase
                         .from('reservations')
                         .select('*')
-                        .eq('status', 'UNDELIVERED')
+                        .eq('status', status)
                         .order('date_of_entry', { ascending: false })
                         .range(start, start + pageSize - 1);
 
@@ -1423,11 +1426,11 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
                 }
 
                 if (allRows.length === 0) {
-                    alert('No UNDELIVERED records found to export.');
+                    alert(`No ${status} records found to export.`);
                     return;
                 }
 
-                downloadRecordsAsCSV(allRows, `undelivered_reservations_${buildExportTimestamp(new Date())}.csv`);
+                downloadRecordsAsCSV(allRows, `${status.toLowerCase()}_reservations_${buildExportTimestamp(new Date())}.csv`);
             } catch (err) {
                 alert(`Export failed: ${err.message || err}`);
             } finally {
@@ -1504,10 +1507,10 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
                 const dDate = item.date_of_entry ? new Date(item.date_of_entry).toLocaleDateString() : '--';
                 const isDel = (item.status || '').toUpperCase() === 'DELIVERED';
 
-                // Status is now a clickable toggle button (instant AJAX update, no page reload)
-                const statusBtn = isDel
-                    ? `<button class="status-toggle-btn bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold text-[10px] px-2 py-1 rounded-full border border-emerald-200 transition" data-id="${item.id}" title="Click to mark UNDELIVERED">DELIVERED</button>`
-                    : `<button class="status-toggle-btn bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold text-[10px] px-2 py-1 rounded-full border border-amber-200 transition" data-id="${item.id}" title="Click to mark DELIVERED">UNDELIVERED</button>`;
+                // Status is a static read-only badge — use the ✏️ Edit button to change it.
+                const statusBadge = isDel
+                    ? `<span class="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-1 rounded-full border border-emerald-200">DELIVERED</span>`
+                    : `<span class="bg-amber-100 text-amber-800 font-bold text-[10px] px-2 py-1 rounded-full border border-amber-200">UNDELIVERED</span>`;
 
                 const remarksPreview = item.remarks ? escapeHtml(item.remarks) : '<span class="text-slate-300 italic">—</span>';
 
@@ -1522,7 +1525,7 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
                     <td class="px-3 py-3 font-mono text-blue-600 font-medium">${escapeHtml(item.batch_code)}</td>
                     <td class="px-3 py-3 text-amber-700 font-medium whitespace-nowrap">${escapeHtml(item.expiration_date) || '--'}</td>
                     <td class="px-3 py-3 text-slate-500 max-w-[120px] truncate" title="${escapeHtml(item.whse_order)}">${escapeHtml(item.whse_order)}</td>
-                    <td class="px-3 py-3 text-center">${statusBtn}</td>
+                    <td class="px-3 py-3 text-center">${statusBadge}</td>
                     <td class="px-3 py-3 text-slate-500 max-w-[160px] truncate" title="${remarksPreview === '' ? '' : escapeHtml(item.remarks || '')}">${remarksPreview}</td>
                     <td class="px-3 py-3 text-center whitespace-nowrap">
                         <button class="ledger-edit-btn text-blue-600 hover:text-blue-800 font-semibold mr-2" data-id="${item.id}">✏️ Edit</button>
@@ -1531,22 +1534,6 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
                 `;
                 tbody.appendChild(tr);
             });
-        }
-
-        // Toggle DELIVERED <-> UNDELIVERED instantly via fetch/AJAX, no page reload.
-        async function toggleDeliveryStatus(id) {
-            const item = currentLedgerData.find(r => r.id === id);
-            if (!item) return;
-            const nextStatus = (item.status || '').toUpperCase() === 'DELIVERED' ? 'UNDELIVERED' : 'DELIVERED';
-
-            const { error } = await _supabase.from('reservations').update({ status: nextStatus }).eq('id', id);
-            if (error) {
-                alert(`Status update failed: ${error.message}`);
-                return;
-            }
-
-            item.status = nextStatus;
-            loadAllReservationsLedger();
         }
 
         async function deleteReservationRow(id) {
@@ -1559,16 +1546,12 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
             }
         }
 
-        // Event delegation for ledger row actions (toggle / edit / delete)
+        // Event delegation for ledger row actions (edit / delete)
         function setupLedgerActions() {
             document.getElementById('ledgerTableBody').addEventListener('click', (e) => {
-                const toggleBtn = e.target.closest('.status-toggle-btn');
                 const editBtn = e.target.closest('.ledger-edit-btn');
                 const deleteBtn = e.target.closest('.ledger-delete-btn');
 
-                if (toggleBtn) {
-                    toggleDeliveryStatus(parseInt(toggleBtn.dataset.id, 10));
-                }
                 if (editBtn) {
                     const item = currentLedgerData.find(r => r.id === parseInt(editBtn.dataset.id, 10));
                     if (item) openEditModal(item);
@@ -1579,7 +1562,8 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
             });
 
             document.getElementById('refreshLedgerBtn').addEventListener('click', () => loadAllReservationsLedger());
-            document.getElementById('exportUndeliveredBtn').addEventListener('click', () => exportUndeliveredRecords());
+            document.getElementById('exportUndeliveredBtn').addEventListener('click', () => exportRecordsByStatus('UNDELIVERED', 'exportUndeliveredBtn'));
+            document.getElementById('exportDeliveredBtn').addEventListener('click', () => exportRecordsByStatus('DELIVERED', 'exportDeliveredBtn'));
             document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => { ledgerPage = 0; loadAllReservationsLedger(); }, 300));
 
             // Filter dropdowns — any change resets to page 1 and refetches

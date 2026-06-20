@@ -305,6 +305,9 @@
                     <button id="ledgerClearFiltersBtn" class="border border-slate-300 hover:bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-2 rounded-lg transition">
                         ✖ Clear Filters
                     </button>
+                    <button id="openBulkStatusModalBtn" class="border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-2 rounded-lg transition">
+                        📋 Bulk Paste Update
+                    </button>
                     <button id="refreshLedgerBtn" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm md:ml-auto">
                         🔄 Refresh Data
                     </button>
@@ -424,6 +427,38 @@
         </div>
     </div>
 
+    <!-- BULK STATUS UPDATE MODAL (paste status + picklist columns copied from Excel) -->
+    <div id="bulkStatusModal" class="fixed inset-0 z-[95] bg-black/50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white">
+                <h3 class="text-lg font-bold text-slate-900">📋 Bulk Status Update — Paste from Excel</h3>
+                <button id="bulkStatusCloseBtn" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    Copy two columns from Excel — <strong>Status</strong> and <strong>Picklist</strong> (either order, header row optional) — and paste them below.
+                    Every reservation record matching a picklist number will be updated to that status (e.g. blank/null &rarr; DELIVERED, or DELIVERED &rarr; UNDELIVERED).
+                    Type <code class="bg-slate-100 px-1 rounded">NULL</code> as the status to clear a status back to blank.
+                </p>
+                <textarea id="bulkStatusTextarea" rows="10" spellcheck="false" placeholder="status	picklist
+DELIVERED	6051538118
+DELIVERED	6051538117
+UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+
+                <div id="bulkStatusPreviewWrap" class="hidden">
+                    <p class="text-xs font-semibold text-slate-700 mb-1">Preview <span id="bulkStatusPreviewCount" class="font-normal text-slate-400"></span></p>
+                    <div id="bulkStatusPreview" class="border border-slate-200 rounded-lg max-h-56 overflow-y-auto text-xs divide-y divide-slate-100"></div>
+                </div>
+
+                <div id="bulkStatusResult" class="hidden text-xs border rounded-lg p-3"></div>
+            </div>
+            <div class="flex justify-end gap-3 border-t px-6 py-4 sticky bottom-0 bg-white">
+                <button id="bulkStatusParseBtn" class="border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-lg transition">🔍 Preview</button>
+                <button id="bulkStatusApplyBtn" disabled class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-md transition">✅ Apply Updates</button>
+            </div>
+        </div>
+    </div>
+
     </div><!-- /#appShell -->
 
     <script>
@@ -440,6 +475,7 @@
         let ledgerPage = 0;            // zero-indexed current page for the All Reservations Ledger
         let ledgerPageSize = 100;      // rows per page (selectable: 100 / 250 / 500 / 1000)
         let ledgerTotalCount = 0;      // total matching rows reported by the last query (for pagination UI)
+        let bulkStatusParsedEntries = null;   // Map(picklist -> newStatus) built by the Bulk Paste Update preview step
         let appInitialized = false;   // guards against re-running setup listeners twice
 
         // ============================================================
@@ -522,6 +558,7 @@
             setupDBManagementTabs();
             setupLedgerActions();
             setupEditModal();
+            setupBulkStatusModal();
 
             // Perform initial full system backend check asynchronously
             await populateLookupData();
@@ -1481,6 +1518,231 @@
                     applyLedgerSort();
                     renderLedgerRows();
                 });
+            });
+        }
+
+        // ============================================================
+        // BULK STATUS UPDATE — paste two columns (status + picklist)
+        // copied straight out of Excel, preview the parsed rows, then
+        // push status updates to every reservation row matching each
+        // picklist number. Handles either column order, an optional
+        // header row, and "NULL" as a way to clear a status back to
+        // blank.
+        // ============================================================
+
+        // Splits one pasted line into 2+ cells. Excel paste is tab-
+        // separated; fall back to runs-of-spaces or commas in case the
+        // user pasted from somewhere else.
+        function splitBulkStatusLine(line) {
+            let cols = line.split('\t');
+            if (cols.length < 2) cols = line.split(/\s{2,}/);
+            if (cols.length < 2) cols = line.split(',');
+            return cols.map(c => c.trim()).filter(c => c !== '');
+        }
+
+        // Given the cells of one row, figures out which cell is the
+        // status and which is the picklist — works regardless of
+        // column order, since only the status cell can match one of
+        // the known status keywords.
+        function classifyBulkStatusRow(cols) {
+            let statusTok = null;
+            let picklistTok = null;
+            for (const c of cols) {
+                const upper = c.toUpperCase();
+                if (['DELIVERED', 'UNDELIVERED', 'NULL'].includes(upper)) {
+                    statusTok = upper;
+                } else if (!picklistTok) {
+                    picklistTok = c;
+                }
+            }
+            return { statusTok, picklistTok };
+        }
+
+        // Parses the full pasted block into a Map(picklist -> newStatus)
+        // plus a list of lines that couldn't be understood (shown to the
+        // user so nothing silently gets dropped). Duplicate picklist
+        // numbers collapse to their last occurrence in the pasted data.
+        function parseBulkStatusPaste(text) {
+            const lines = text.split(/\r?\n/);
+            const entries = new Map();
+            const skipped = [];
+
+            lines.forEach(rawLine => {
+                const line = rawLine.trim();
+                if (!line) return;
+
+                const cols = splitBulkStatusLine(line);
+                if (cols.length < 2) {
+                    skipped.push({ line: rawLine, reason: 'Could not split into 2 columns' });
+                    return;
+                }
+
+                // Skip a literal header row, e.g. "status   picklist"
+                const lc = cols.map(c => c.toLowerCase());
+                if (lc.includes('status') && lc.includes('picklist')) return;
+
+                const { statusTok, picklistTok } = classifyBulkStatusRow(cols);
+
+                if (!statusTok) {
+                    skipped.push({ line: rawLine, reason: 'No valid status found (expected DELIVERED / UNDELIVERED / NULL)' });
+                    return;
+                }
+                if (!picklistTok) {
+                    skipped.push({ line: rawLine, reason: 'No picklist number found' });
+                    return;
+                }
+
+                // Clean up Excel artifacts: thousand separators, trailing ".0" from numeric export
+                const cleanPicklist = picklistTok.replace(/,/g, '').replace(/\.0+$/, '');
+                const dbStatus = statusTok === 'NULL' ? null : statusTok;
+
+                entries.set(cleanPicklist, dbStatus);
+            });
+
+            return { entries, skipped };
+        }
+
+        // Renders the parsed entries + any skipped lines into the preview panel.
+        function renderBulkStatusPreview(entries, skipped) {
+            const wrap = document.getElementById('bulkStatusPreviewWrap');
+            const countEl = document.getElementById('bulkStatusPreviewCount');
+            const listEl = document.getElementById('bulkStatusPreview');
+            wrap.classList.remove('hidden');
+            countEl.textContent = `(${entries.size} picklist${entries.size === 1 ? '' : 's'} to update${skipped.length ? `, ${skipped.length} line(s) skipped` : ''})`;
+
+            let rowsHtml = '';
+            entries.forEach((status, picklist) => {
+                const statusLabel = status === null ? 'NULL (clear)' : status;
+                const badgeClass = status === 'DELIVERED'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    : status === 'UNDELIVERED'
+                        ? 'bg-amber-100 text-amber-800 border-amber-200'
+                        : 'bg-slate-100 text-slate-600 border-slate-200';
+                rowsHtml += `
+                    <div class="flex items-center justify-between px-3 py-1.5">
+                        <span class="font-mono text-slate-700">${escapeHtml(picklist)}</span>
+                        <span class="font-bold text-[10px] px-2 py-0.5 rounded-full border ${badgeClass}">${escapeHtml(statusLabel)}</span>
+                    </div>`;
+            });
+
+            skipped.forEach(s => {
+                rowsHtml += `
+                    <div class="px-3 py-1.5 bg-red-50">
+                        <span class="text-red-600 font-semibold">⚠ Skipped:</span>
+                        <span class="font-mono text-slate-500"> "${escapeHtml(s.line)}"</span>
+                        <span class="text-slate-400"> — ${escapeHtml(s.reason)}</span>
+                    </div>`;
+            });
+
+            listEl.innerHTML = rowsHtml || `<div class="px-3 py-3 text-slate-400 italic">Nothing to preview yet.</div>`;
+        }
+
+        // Runs the actual updates against Supabase, a handful at a time so we
+        // don't fire off hundreds of simultaneous requests. Each picklist
+        // number updates ALL reservation rows that share that picklist.
+        async function runBulkStatusUpdate(entries) {
+            const results = { updated: [], notFound: [], errors: [] };
+            const list = Array.from(entries.entries()); // [ [picklist, status], ... ]
+            const chunkSize = 10;
+
+            for (let i = 0; i < list.length; i += chunkSize) {
+                const chunk = list.slice(i, i + chunkSize);
+                await Promise.all(chunk.map(async ([picklist, status]) => {
+                    try {
+                        const { data, error } = await _supabase
+                            .from('reservations')
+                            .update({ status: status })
+                            .eq('picklist', picklist)
+                            .select('id');
+
+                        if (error) {
+                            results.errors.push({ picklist, message: error.message });
+                        } else if (!data || data.length === 0) {
+                            results.notFound.push(picklist);
+                        } else {
+                            results.updated.push({ picklist, count: data.length, status });
+                        }
+                    } catch (err) {
+                        results.errors.push({ picklist, message: err.message || String(err) });
+                    }
+                }));
+            }
+
+            return results;
+        }
+
+        // Renders the success/failure summary after Apply Updates runs.
+        function renderBulkStatusResult(results) {
+            const box = document.getElementById('bulkStatusResult');
+            box.classList.remove('hidden');
+
+            const totalRecordsUpdated = results.updated.reduce((sum, u) => sum + u.count, 0);
+
+            let html = `<p class="font-semibold text-emerald-700 mb-1">✅ Updated ${results.updated.length} picklist(s) — ${totalRecordsUpdated} reservation record(s) total.</p>`;
+
+            if (results.notFound.length > 0) {
+                html += `<p class="font-semibold text-amber-700 mt-2 mb-1">⚠ ${results.notFound.length} picklist(s) not found in the database:</p>
+                    <p class="font-mono text-slate-500 break-all">${results.notFound.map(escapeHtml).join(', ')}</p>`;
+            }
+
+            if (results.errors.length > 0) {
+                html += `<p class="font-semibold text-red-700 mt-2 mb-1">✖ ${results.errors.length} update(s) failed:</p>
+                    <ul class="list-disc list-inside text-slate-500">
+                        ${results.errors.map(e => `<li><span class="font-mono">${escapeHtml(e.picklist)}</span> — ${escapeHtml(e.message)}</li>`).join('')}
+                    </ul>`;
+            }
+
+            box.className = `text-xs border rounded-lg p-3 ${results.errors.length > 0 ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'}`;
+            box.innerHTML = html;
+        }
+
+        function openBulkStatusModal() {
+            document.getElementById('bulkStatusTextarea').value = '';
+            document.getElementById('bulkStatusPreviewWrap').classList.add('hidden');
+            document.getElementById('bulkStatusResult').classList.add('hidden');
+            document.getElementById('bulkStatusApplyBtn').disabled = true;
+            bulkStatusParsedEntries = null;
+            document.getElementById('bulkStatusModal').classList.remove('hidden');
+            document.getElementById('bulkStatusModal').classList.add('flex');
+        }
+
+        function closeBulkStatusModal() {
+            document.getElementById('bulkStatusModal').classList.add('hidden');
+            document.getElementById('bulkStatusModal').classList.remove('flex');
+        }
+
+        function setupBulkStatusModal() {
+            document.getElementById('openBulkStatusModalBtn').addEventListener('click', openBulkStatusModal);
+            document.getElementById('bulkStatusCloseBtn').addEventListener('click', closeBulkStatusModal);
+
+            document.getElementById('bulkStatusParseBtn').addEventListener('click', () => {
+                const text = document.getElementById('bulkStatusTextarea').value;
+                const { entries, skipped } = parseBulkStatusPaste(text);
+                bulkStatusParsedEntries = entries;
+                document.getElementById('bulkStatusResult').classList.add('hidden');
+                renderBulkStatusPreview(entries, skipped);
+                document.getElementById('bulkStatusApplyBtn').disabled = entries.size === 0;
+            });
+
+            document.getElementById('bulkStatusApplyBtn').addEventListener('click', async () => {
+                if (!bulkStatusParsedEntries || bulkStatusParsedEntries.size === 0) return;
+
+                const count = bulkStatusParsedEntries.size;
+                if (!confirm(`Apply status updates to ${count} picklist number(s)? This updates every matching reservation record and cannot be undone.`)) return;
+
+                const applyBtn = document.getElementById('bulkStatusApplyBtn');
+                applyBtn.disabled = true;
+                applyBtn.textContent = '⏳ Applying...';
+
+                const results = await runBulkStatusUpdate(bulkStatusParsedEntries);
+                renderBulkStatusResult(results);
+
+                applyBtn.textContent = '✅ Apply Updates';
+                applyBtn.disabled = true; // require a fresh Preview before applying again
+
+                // Reflect the changes in the ledger immediately
+                ledgerPage = 0;
+                loadAllReservationsLedger();
             });
         }
 

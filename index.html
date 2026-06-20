@@ -9,20 +9,61 @@
 </head>
 <body class="bg-slate-50 font-sans min-h-screen text-slate-800">
 
+    <!-- ============================================================
+         LOGIN GATE
+         Simple client-side credential gate. NOTE: because this is a
+         static frontend using a Supabase publishable key, this check
+         happens in the browser and is NOT a substitute for real
+         server-side auth. It satisfies the "only authenticated users
+         can use the UI" requirement for an internal tool, but the
+         credentials are visible to anyone who views page source.
+         ============================================================ -->
+    <div id="loginOverlay" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-xl shadow-2xl p-8">
+            <div class="text-center mb-6">
+                <div class="text-3xl mb-2">🔐</div>
+                <h1 class="text-xl font-bold text-slate-900">Logistics Hub Access</h1>
+                <p class="text-xs text-slate-500 mt-1">Sign in with your assigned credentials to continue.</p>
+            </div>
+            <form id="loginForm" class="space-y-4" novalidate>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Username</label>
+                    <input type="text" id="loginUsername" autocomplete="username" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g. admin">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Password</label>
+                    <input type="password" id="loginPassword" autocomplete="current-password" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="••••••••">
+                </div>
+                <p id="loginError" class="text-xs text-red-600 h-4"></p>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-md transition duration-150">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MAIN APPLICATION SHELL (hidden until login succeeds)
+         ============================================================ -->
+    <div id="appShell" class="hidden">
+
     <header class="bg-blue-800 text-white shadow-md px-6 py-4">
         <div class="max-w-[1600px] mx-auto flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">Logistics Hub: Fulfillment Network</h1>
                 <p class="text-xs text-blue-200 mt-0.5">Enterprise Allocation & FEFO Validation Ledger</p>
             </div>
-            <span class="text-sm bg-blue-900 px-3 py-1 rounded-full border border-blue-500 font-mono">V2.4 Stable Operational Engine</span>
+            <div class="flex items-center gap-3">
+                <span class="text-sm bg-blue-900 px-3 py-1 rounded-full border border-blue-500 font-mono">V2.5 Stable Operational Engine</span>
+                <span class="text-xs text-blue-200 hidden sm:inline">Signed in as <strong id="currentUserLabel" class="text-white"></strong></span>
+                <button id="logoutBtn" class="text-xs bg-blue-950 hover:bg-red-700 px-3 py-1.5 rounded-lg border border-blue-700 transition font-semibold">Logout</button>
+            </div>
         </div>
     </header>
 
     <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-40">
         <div class="max-w-[1600px] mx-auto px-4 lg:px-8 flex flex-wrap gap-1">
             <button id="tabBtnReservation" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-700 transition">📝 Reservation Entry</button>
-            <button id="tabBtnMasterdel" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">🔄 Update MasterDel</button>
             <button id="tabBtnMasterDB" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">📦 MasterDB Materials</button>
             <button id="tabBtnCustomerDB" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">🏢 CustomerDB Ledger</button>
             <button id="tabBtnAllReservations" class="tab-btn px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">📋 All Reservation Logs</button>
@@ -147,50 +188,6 @@
             </div>
         </div>
 
-        <div id="tabMasterdelView" class="tab-content hidden transition-all duration-150">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-xl font-bold text-slate-900 border-b pb-3 mb-2">Update MasterDel Table</h2>
-                <p class="text-sm text-slate-500 mb-6">Look up a record by Picklist Number, edit its fields, then save changes directly to the database.</p>
-
-                <div class="flex flex-col md:flex-row gap-3 items-start md:items-end mb-6">
-                    <div class="w-full md:w-64">
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Picklist No <span class="text-red-500">*</span></label>
-                        <input type="text" id="mdPicklistSearch" maxlength="10" inputmode="numeric" placeholder="10-digit picklist number" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-                    <button id="mdSearchBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-lg shadow-sm transition duration-150">
-                        🔍 Search Record
-                    </button>
-                </div>
-
-                <p id="mdSearchMessage" class="text-sm mb-4"></p>
-
-                <div id="mdRecordPanel" class="hidden">
-                    <div id="mdFieldsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
-                    <div class="flex gap-3">
-                        <button id="mdSaveBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-md transition">
-                            💾 Update Record
-                        </button>
-                        <button id="mdCancelBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2.5 px-5 rounded-lg transition">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-
-                <div id="mdNotFoundPanel" class="hidden">
-                    <p class="text-sm text-slate-600 mb-4">No record exists yet for this Picklist No. You can create one with an initial status below.</p>
-                    <div class="flex flex-col md:flex-row gap-3 items-start md:items-end">
-                        <div class="w-full md:w-64">
-                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Status</label>
-                            <input type="text" id="mdNewStatus" placeholder="e.g., UNDELIVERED" value="UNDELIVERED" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-                        <button id="mdCreateBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-lg shadow-sm transition">
-                            ➕ Create Record
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div id="tabMasterDBView" class="tab-content hidden transition-all duration-150">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h2 class="text-xl font-bold text-slate-900 border-b pb-3 mb-2">Materials Master Registry (`materials_db`)</h2>
@@ -210,17 +207,18 @@
                     </button>
                 </form>
 
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
                     <table class="w-full text-left text-sm border-collapse">
-                        <thead>
+                        <thead class="sticky top-0">
                             <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold text-xs uppercase tracking-wider">
                                 <th class="px-4 py-3">Material Code</th>
                                 <th class="px-4 py-3">Material Description</th>
+                                <th class="px-4 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="mdbTableBody" class="divide-y divide-slate-200">
                             <tr>
-                                <td colspan="2" class="px-4 py-4 text-center text-slate-400 italic">No master materials loaded yet.</td>
+                                <td colspan="3" class="px-4 py-4 text-center text-slate-400 italic">No master materials loaded yet.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -243,16 +241,17 @@
                     </button>
                 </form>
 
-                <div class="overflow-x-auto max-w-xl">
+                <div class="overflow-x-auto max-w-2xl max-h-[520px] overflow-y-auto">
                     <table class="w-full text-left text-sm border-collapse">
-                        <thead>
+                        <thead class="sticky top-0">
                             <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 font-semibold text-xs uppercase tracking-wider">
                                 <th class="px-4 py-3">Registered Customer Name</th>
+                                <th class="px-4 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="cdbTableBody" class="divide-y divide-slate-200">
                             <tr>
-                                <td class="px-4 py-4 text-center text-slate-400 italic">No accounts mapped yet.</td>
+                                <td colspan="2" class="px-4 py-4 text-center text-slate-400 italic">No accounts mapped yet.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -290,11 +289,13 @@
                                 <th class="px-3 py-3">Expiry Date</th>
                                 <th class="px-3 py-3">Whse Order</th>
                                 <th class="px-3 py-3 text-center">Status</th>
+                                <th class="px-3 py-3">Remarks</th>
+                                <th class="px-3 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="ledgerTableBody" class="divide-y divide-slate-200 text-slate-700">
                             <tr>
-                                <td colspan="11" class="px-3 py-8 text-center text-slate-400 italic">Initializing transactional pipeline log streams...</td>
+                                <td colspan="13" class="px-3 py-8 text-center text-slate-400 italic">Initializing transactional pipeline log streams...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -304,6 +305,82 @@
 
     </main>
 
+    <!-- EDIT RESERVATION MODAL (Registration Log module) -->
+    <div id="editReservationModal" class="fixed inset-0 z-[90] bg-black/50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white">
+                <h3 class="text-lg font-bold text-slate-900">Edit Reservation Record</h3>
+                <button id="editModalCloseBtn" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="hidden" id="editRecordId">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Sales Order</label>
+                    <input type="text" id="editSalesOrder" maxlength="10" inputmode="numeric" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Picklist</label>
+                    <input type="text" id="editPicklist" maxlength="10" inputmode="numeric" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Req. Delivery Date</label>
+                    <input type="date" id="editRDD" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Customer Name</label>
+                    <input type="text" id="editCustomerName" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Material Code</label>
+                    <input type="text" id="editMaterialCode" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Material Description</label>
+                    <input type="text" id="editMaterialDesc" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Quantity</label>
+                    <input type="number" step="any" id="editQty" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Batch Code</label>
+                    <input type="text" id="editBatchCode" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Expiration Date <span class="text-slate-400 normal-case">(e.g. DEC-12-2027)</span></label>
+                    <input type="text" id="editExpirationDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Warehouse Order</label>
+                    <input type="text" id="editWhseOrder" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">Delivery Status</label>
+                    <select id="editStatus" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold">
+                        <option value="UNDELIVERED">UNDELIVERED</option>
+                        <option value="DELIVERED">DELIVERED</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700">Remarks / Notes</label>
+                        <button type="button" id="editAppendNoteBtn" class="text-[10px] font-semibold text-blue-600 hover:text-blue-800">+ Append timestamped note</button>
+                    </div>
+                    <textarea id="editRemarks" rows="3" placeholder="Add internal notes about this reservation..." class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-between items-center gap-3 border-t px-6 py-4 sticky bottom-0 bg-white">
+                <button id="editModalDeleteBtn" class="text-red-600 hover:text-red-800 text-sm font-semibold">🗑️ Delete Record</button>
+                <div class="flex gap-3">
+                    <button id="editModalCancelBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2.5 px-5 rounded-lg transition">Cancel</button>
+                    <button id="editModalSaveBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-md transition">💾 Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div><!-- /#appShell -->
+
     <script>
         const SUPABASE_URL = "https://husvyiacumxqfxglibwx.supabase.co";
         const SUPABASE_KEY = "sb_publishable_Mo_b_HNFI83ONCgSneWheg_H161x1MN";
@@ -311,28 +388,100 @@
 
         let globalMaterialsMap = {};   
         let allCustomers = [];         
-        let allMaterials = [];         
+        let allMaterials = [];
+        let currentLedgerData = [];   // cached rows from the last ledger fetch (used by Edit/Delete/Toggle actions)
+        let appInitialized = false;   // guards against re-running setup listeners twice
 
-        window.addEventListener('DOMContentLoaded', async () => {
+        // ============================================================
+        // AUTHENTICATION (client-side credential gate)
+        // ------------------------------------------------------------
+        // NOTE: This is a static frontend talking directly to Supabase
+        // with a publishable key, so there is no application server to
+        // hold a secret. Hardcoding the recognized accounts here and
+        // gating the UI on a successful match satisfies "only
+        // authenticated staff can use this internal tool" for an
+        // intranet-style deployment, but it is NOT equivalent to real
+        // server-side authentication/authorization. For production-grade
+        // security, migrate to Supabase Auth (email/password or magic
+        // link) and scope Row Level Security policies to auth.uid().
+        // ============================================================
+        const AUTH_USERS = {
+            "admin": "superadmin",
+            "R. DIONEDA": "123",
+            "S. MALABARBAS": "123"
+        };
+        const AUTH_SESSION_KEY = "lh_auth_user";
+
+        function checkAuthOnLoad() {
+            const savedUser = sessionStorage.getItem(AUTH_SESSION_KEY);
+            if (savedUser && Object.prototype.hasOwnProperty.call(AUTH_USERS, savedUser)) {
+                grantAccess(savedUser);
+            } else {
+                document.getElementById('loginOverlay').classList.remove('hidden');
+                document.getElementById('appShell').classList.add('hidden');
+                document.getElementById('loginUsername').focus();
+            }
+        }
+
+        function grantAccess(username) {
+            sessionStorage.setItem(AUTH_SESSION_KEY, username);
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('appShell').classList.remove('hidden');
+            document.getElementById('currentUserLabel').textContent = username;
+            if (!appInitialized) {
+                initApp();
+                appInitialized = true;
+            }
+        }
+
+        function setupAuthListeners() {
+            document.getElementById('loginForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const user = document.getElementById('loginUsername').value.trim();
+                const pass = document.getElementById('loginPassword').value;
+                const errEl = document.getElementById('loginError');
+
+                if (Object.prototype.hasOwnProperty.call(AUTH_USERS, user) && AUTH_USERS[user] === pass) {
+                    errEl.textContent = '';
+                    document.getElementById('loginForm').reset();
+                    grantAccess(user);
+                } else {
+                    errEl.textContent = '⚠️ Invalid username or password.';
+                }
+            });
+
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                sessionStorage.removeItem(AUTH_SESSION_KEY);
+                location.reload();
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setupAuthListeners();
+            checkAuthOnLoad();
+        });
+
+        // ---------- Core Application Initialization (runs once, after login) ----------
+        async function initApp() {
             console.log("[System Debug] Executing Application Core UI Initialization Sequence...");
             setCurrentTimestamp();
 
             setupTabs();
             setupEventListeners();
             setupAutocompleteFields();
-            setupMasterdelPanel();
             setupDBManagementTabs();
+            setupLedgerActions();
+            setupEditModal();
 
             // Perform initial full system backend check asynchronously
             await populateLookupData();
             await refreshAllLocalLedgerTables();
-        });
+        }
 
         // ---------- System Core Navigation Controller Tabs Mode ----------
         function setupTabs() {
             const tabsMap = {
                 'tabBtnReservation': 'tabReservationView',
-                'tabBtnMasterdel': 'tabMasterdelView',
                 'tabBtnMasterDB': 'tabMasterDBView',
                 'tabBtnCustomerDB': 'tabCustomerDBView',
                 'tabBtnAllReservations': 'tabAllReservationsView'
@@ -429,7 +578,7 @@
                 boxId: 'materialSuggestions',
                 hintId: 'materialHint',
                 getData: () => allMaterials,
-                getLabel: m => `${m.material_code} — ${m.material_description}`,
+                getLabel: m => m.material_code,
                 getValue: m => m.material_code,
                 onSelect: (m) => {
                     document.getElementById('materialDesc').value = m ? m.material_description : '';
@@ -745,93 +894,6 @@
             }
         }
 
-        // ---------- TAB 2: Update MasterDel Logic Sub-routines ----------
-        function setupMasterdelPanel() {
-            let activeRecord = null;
-            const searchInput = document.getElementById('mdPicklistSearch');
-            const searchBtn = document.getElementById('mdSearchBtn');
-            const message = document.getElementById('mdSearchMessage');
-            const recordPanel = document.getElementById('mdRecordPanel');
-            const fieldsContainer = document.getElementById('mdFieldsContainer');
-            const notFoundPanel = document.getElementById('mdNotFoundPanel');
-
-            searchBtn.addEventListener('click', async () => {
-                const query = searchInput.value.trim();
-                message.textContent = "";
-                recordPanel.classList.add('hidden');
-                notFoundPanel.classList.add('hidden');
-
-                if (!/^\d{10}$/.test(query)) {
-                    message.className = "text-sm text-red-600";
-                    message.textContent = "⚠️ Please supply a structural 10-digit tracking picklist numerical combination.";
-                    return;
-                }
-
-                const { data, error } = await _supabase.from('masterdel').select('*').eq('picklist_no', query).maybeSingle();
-
-                if (error) {
-                    message.className = "text-sm text-red-600";
-                    message.textContent = `Error calling storage framework: ${error.message}`;
-                    return;
-                }
-
-                if (data) {
-                    activeRecord = data;
-                    fieldsContainer.innerHTML = `
-                        <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Picklist Key (Immutable)</label>
-                            <input type="text" value="${data.picklist_no}" readonly class="w-full bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 cursor-not-allowed font-mono">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold uppercase text-slate-700 mb-1">Fulfillment Status String</label>
-                            <input type="text" id="mdInputStatus" value="${data.status || ''}" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold">
-                        </div>
-                    `;
-                    recordPanel.classList.remove('hidden');
-                } else {
-                    notFoundPanel.classList.remove('hidden');
-                }
-            });
-
-            document.getElementById('mdSaveBtn').addEventListener('click', async () => {
-                if (!activeRecord) return;
-                const nextStatus = document.getElementById('mdInputStatus').value.trim().toUpperCase();
-                
-                // Update master status tracking array
-                const { error } = await _supabase.from('masterdel').update({ status: nextStatus }).eq('picklist_no', activeRecord.picklist_no);
-                
-                if (error) {
-                    alert(`Update rejected: ${error.message}`);
-                } else {
-                    // Update matching records in the reservations table to keep data synchronized
-                    await _supabase.from('reservations').update({ status: nextStatus }).eq('picklist', activeRecord.picklist_no);
-                    alert("✅ MasterDel system configuration modified successfully.");
-                    recordPanel.classList.add('hidden');
-                    searchInput.value = "";
-                }
-            });
-
-            document.getElementById('mdCreateBtn').addEventListener('click', async () => {
-                const pickNo = searchInput.value.trim();
-                const initStatus = document.getElementById('mdNewStatus').value.trim().toUpperCase();
-                if (!pickNo || !initStatus) return;
-
-                const { error } = await _supabase.from('masterdel').insert({ picklist_no: pickNo, status: initStatus });
-                if (error) {
-                    alert(`Creation processing failure: ${error.message}`);
-                } else {
-                    alert(`✅ Registry line entry initialized successfully.`);
-                    notFoundPanel.classList.add('hidden');
-                    searchInput.value = "";
-                }
-            });
-
-            document.getElementById('mdCancelBtn').addEventListener('click', () => {
-                recordPanel.classList.add('hidden');
-                searchInput.value = "";
-            });
-        }
-
         // ---------- TAB 3 & 4: Master DB Entities Controllers ----------
         function setupDBManagementTabs() {
             // Master Materials Form Submit
@@ -842,9 +904,20 @@
 
                 if (!code || !desc) { alert("Please complete both parameters."); return; }
 
-                const { error } = await _supabase.from('materials_db').upsert({ material_code: code, material_description: desc });
+                // .select() forces Supabase to return the written row(s) instead of
+                // a bare 204. If RLS silently blocks the write, `data` comes back
+                // empty even though `error` is null — so we check both.
+                const { data, error } = await _supabase
+                    .from('materials_db')
+                    .upsert({ material_code: code, material_description: desc }, { onConflict: 'material_code' })
+                    .select();
+
+                console.log('[materials_db upsert]', { data, error });
+
                 if (error) {
                     alert(`Database operation failed: ${error.message}`);
+                } else if (!data || data.length === 0) {
+                    alert("⚠️ The save request was accepted but no row was returned, which usually means Row Level Security is silently blocking the write.\n\nIn Supabase, run:\n  SELECT polname, cmd FROM pg_policies WHERE tablename = 'materials_db';\nand confirm INSERT and UPDATE policies exist (see schema_updates.sql).");
                 } else {
                     alert("Material master ledger updated successfully.");
                     document.getElementById('masterDBForm').reset();
@@ -860,9 +933,13 @@
 
                 if (!name) { alert("Please complete the Name input parameter."); return; }
 
-                const { error } = await _supabase.from('customers_db').insert({ customer_name: name });
+                const { data, error } = await _supabase.from('customers_db').insert({ customer_name: name }).select();
+                console.log('[customers_db insert]', { data, error });
+
                 if (error) {
                     alert(`Database operation failed: ${error.message}`);
+                } else if (!data || data.length === 0) {
+                    alert("⚠️ The save request was accepted but no row was returned, which usually means Row Level Security is silently blocking the write. Check that INSERT policies exist on customers_db (see schema_updates.sql).");
                 } else {
                     alert("Customer account successfully registered.");
                     document.getElementById('customerDBForm').reset();
@@ -871,46 +948,193 @@
                 }
             });
 
-            // Ledger adjustments listeners
-            document.getElementById('refreshLedgerBtn').addEventListener('click', () => loadAllReservationsLedger());
-            document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => loadAllReservationsLedger(), 300));
+            // Materials / Customers table row actions (edit-in-row, delete)
+            setupMaterialsTableActions();
+            setupCustomersTableActions();
         }
 
+        // ---------- Small escaping helper to keep injected text safe inside template HTML ----------
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ============================================================
+        // TAB 3: Materials Master Table — list, edit-in-row, delete
+        // ============================================================
         function renderMaterialsMasterTable() {
             const body = document.getElementById('mdbTableBody');
             body.innerHTML = "";
             if (allMaterials.length === 0) {
-                body.innerHTML = `<tr><td colspan="2" class="px-4 py-4 text-center text-slate-400 italic">No inventory material rows found inside reference memory maps.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="3" class="px-4 py-4 text-center text-slate-400 italic">No inventory material rows found inside reference memory maps.</td></tr>`;
                 return;
             }
-            allMaterials.slice(0, 15).forEach(m => {
+            allMaterials.forEach(m => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 text-xs";
-                tr.innerHTML = `<td class="px-4 py-2 font-mono font-bold text-slate-700">${m.material_code}</td><td class="px-4 py-2 text-slate-600">${m.material_description}</td>`;
+                tr.dataset.code = m.material_code;
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-mono font-bold text-slate-700 mdb-code-cell">${escapeHtml(m.material_code)}</td>
+                    <td class="px-4 py-2 text-slate-600 mdb-desc-cell">${escapeHtml(m.material_description)}</td>
+                    <td class="px-4 py-2 text-center">
+                        <button class="mdb-edit-btn text-blue-600 hover:text-blue-800 font-semibold mr-3" data-code="${escapeHtml(m.material_code)}">✏️ Edit</button>
+                        <button class="mdb-delete-btn text-red-600 hover:text-red-800 font-semibold" data-code="${escapeHtml(m.material_code)}">🗑️ Delete</button>
+                    </td>`;
                 body.appendChild(tr);
             });
         }
 
+        function setupMaterialsTableActions() {
+            document.getElementById('mdbTableBody').addEventListener('click', async (e) => {
+                const editBtn = e.target.closest('.mdb-edit-btn');
+                const deleteBtn = e.target.closest('.mdb-delete-btn');
+                const saveBtn = e.target.closest('.mdb-save-btn');
+                const cancelBtn = e.target.closest('.mdb-cancel-btn');
+
+                if (editBtn) {
+                    const code = editBtn.dataset.code;
+                    const row = document.querySelector(`#mdbTableBody tr[data-code="${CSS.escape(code)}"]`);
+                    const material = allMaterials.find(m => m.material_code === code);
+                    if (!row || !material) return;
+                    row.querySelector('.mdb-desc-cell').innerHTML = `<input type="text" class="mdb-edit-desc-input w-full border border-blue-400 rounded px-2 py-1" value="${escapeHtml(material.material_description)}">`;
+                    row.querySelector('td:last-child').innerHTML = `
+                        <button class="mdb-save-btn text-emerald-600 hover:text-emerald-800 font-semibold mr-3" data-code="${escapeHtml(code)}">💾 Save</button>
+                        <button class="mdb-cancel-btn text-slate-500 hover:text-slate-700 font-semibold" data-code="${escapeHtml(code)}">Cancel</button>`;
+                }
+
+                if (cancelBtn) {
+                    renderMaterialsMasterTable();
+                }
+
+                if (saveBtn) {
+                    const code = saveBtn.dataset.code;
+                    const row = document.querySelector(`#mdbTableBody tr[data-code="${CSS.escape(code)}"]`);
+                    const newDesc = row.querySelector('.mdb-edit-desc-input').value.trim();
+                    if (!newDesc) { alert("Description cannot be empty."); return; }
+
+                    const { data, error } = await _supabase.from('materials_db').update({ material_description: newDesc }).eq('material_code', code).select();
+                    console.log('[materials_db update]', { data, error });
+
+                    if (error) {
+                        alert(`Update failed: ${error.message}`);
+                    } else if (!data || data.length === 0) {
+                        alert("⚠️ No row was updated — check that an UPDATE policy exists on materials_db (see schema_updates.sql).");
+                        renderMaterialsMasterTable();
+                    } else {
+                        await populateLookupData();
+                        renderMaterialsMasterTable();
+                    }
+                }
+
+                if (deleteBtn) {
+                    const code = deleteBtn.dataset.code;
+                    if (!confirm(`Delete material "${code}"? This cannot be undone, and will fail if reservations still reference it.`)) return;
+
+                    const { error } = await _supabase.from('materials_db').delete().eq('material_code', code);
+                    if (error) {
+                        alert(`Delete failed: ${error.message}\n(This usually means existing reservation records still reference this material.)`);
+                    } else {
+                        await populateLookupData();
+                        renderMaterialsMasterTable();
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // TAB 4: Customers Master Table — list, edit-in-row, delete
+        // ============================================================
         function renderCustomersMasterTable() {
             const body = document.getElementById('cdbTableBody');
             body.innerHTML = "";
             if (allCustomers.length === 0) {
-                body.innerHTML = `<tr><td class="px-4 py-4 text-center text-slate-400 italic">No customer account links established inside database.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="2" class="px-4 py-4 text-center text-slate-400 italic">No customer account links established inside database.</td></tr>`;
                 return;
             }
-            allCustomers.slice(0, 15).forEach(c => {
+            allCustomers.forEach(c => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 text-xs";
-                tr.innerHTML = `<td class="px-4 py-2 font-medium text-slate-700">${c.customer_name}</td>`;
+                tr.dataset.name = c.customer_name;
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-medium text-slate-700 cdb-name-cell">${escapeHtml(c.customer_name)}</td>
+                    <td class="px-4 py-2 text-center">
+                        <button class="cdb-edit-btn text-blue-600 hover:text-blue-800 font-semibold mr-3" data-name="${escapeHtml(c.customer_name)}">✏️ Edit</button>
+                        <button class="cdb-delete-btn text-red-600 hover:text-red-800 font-semibold" data-name="${escapeHtml(c.customer_name)}">🗑️ Delete</button>
+                    </td>`;
                 body.appendChild(tr);
             });
         }
 
-        // ---------- TAB 5: Bulk System Transaction Ledger Routing ----------
+        function setupCustomersTableActions() {
+            document.getElementById('cdbTableBody').addEventListener('click', async (e) => {
+                const editBtn = e.target.closest('.cdb-edit-btn');
+                const deleteBtn = e.target.closest('.cdb-delete-btn');
+                const saveBtn = e.target.closest('.cdb-save-btn');
+                const cancelBtn = e.target.closest('.cdb-cancel-btn');
+
+                if (editBtn) {
+                    const name = editBtn.dataset.name;
+                    const row = document.querySelector(`#cdbTableBody tr[data-name="${CSS.escape(name)}"]`);
+                    if (!row) return;
+                    row.querySelector('.cdb-name-cell').innerHTML = `<input type="text" class="cdb-edit-name-input w-full border border-blue-400 rounded px-2 py-1" value="${escapeHtml(name)}">`;
+                    row.querySelector('td:last-child').innerHTML = `
+                        <button class="cdb-save-btn text-emerald-600 hover:text-emerald-800 font-semibold mr-3" data-name="${escapeHtml(name)}">💾 Save</button>
+                        <button class="cdb-cancel-btn text-slate-500 hover:text-slate-700 font-semibold" data-name="${escapeHtml(name)}">Cancel</button>`;
+                }
+
+                if (cancelBtn) {
+                    renderCustomersMasterTable();
+                }
+
+                if (saveBtn) {
+                    const oldName = saveBtn.dataset.name;
+                    const row = document.querySelector(`#cdbTableBody tr[data-name="${CSS.escape(oldName)}"]`);
+                    const newName = row.querySelector('.cdb-edit-name-input').value.trim();
+                    if (!newName) { alert("Customer name cannot be empty."); return; }
+
+                    // Primary key update; ON UPDATE CASCADE on reservations.customer_name keeps history linked.
+                    const { data, error } = await _supabase.from('customers_db').update({ customer_name: newName }).eq('customer_name', oldName).select();
+                    console.log('[customers_db update]', { data, error });
+
+                    if (error) {
+                        alert(`Update failed: ${error.message}`);
+                    } else if (!data || data.length === 0) {
+                        alert("⚠️ No row was updated — check that an UPDATE policy exists on customers_db (see schema_updates.sql).");
+                        renderCustomersMasterTable();
+                    } else {
+                        await populateLookupData();
+                        renderCustomersMasterTable();
+                    }
+                }
+
+                if (deleteBtn) {
+                    const name = deleteBtn.dataset.name;
+                    if (!confirm(`Delete customer "${name}"? This cannot be undone, and will fail if reservations still reference it.`)) return;
+
+                    const { error } = await _supabase.from('customers_db').delete().eq('customer_name', name);
+                    if (error) {
+                        alert(`Delete failed: ${error.message}\n(This usually means existing reservation records still reference this customer.)`);
+                    } else {
+                        await populateLookupData();
+                        renderCustomersMasterTable();
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // TAB 5: Registration Log — Bulk Ledger with status toggle,
+        // remarks, edit (modal), and delete
+        // ============================================================
         async function loadAllReservationsLedger() {
             const tbody = document.getElementById('ledgerTableBody');
             const searchVal = document.getElementById('ledgerSearchInput').value.trim();
-            tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-6 text-center text-slate-400 italic">Streaming live operational databases records...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-6 text-center text-slate-400 italic">Streaming live operational databases records...</td></tr>`;
 
             let query = _supabase.from('reservations').select('*');
 
@@ -922,40 +1146,195 @@
             const { data, error } = await query.order('date_of_entry', { ascending: false }).range(0, 49);
 
             if (error) {
-                tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-4 text-center text-red-500 font-semibold">Ledger Pipeline Failure: ${error.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-4 text-center text-red-500 font-semibold">Ledger Pipeline Failure: ${error.message}</td></tr>`;
                 return;
             }
 
+            currentLedgerData = data || [];
             tbody.innerHTML = "";
-            if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-4 text-center text-slate-400 italic">No matching reservation history matches storage indexes.</td></tr>`;
+            if (currentLedgerData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-4 text-center text-slate-400 italic">No matching reservation history matches storage indexes.</td></tr>`;
                 return;
             }
 
-            data.forEach(item => {
+            currentLedgerData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 border-b border-slate-100 transition";
-                
+                tr.dataset.id = item.id;
+
                 const dDate = item.date_of_entry ? new Date(item.date_of_entry).toLocaleDateString() : '--';
                 const isDel = (item.status || '').toUpperCase() === 'DELIVERED';
-                const badge = isDel 
-                    ? `<span class="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-200">DELIVERED</span>`
-                    : `<span class="bg-amber-100 text-amber-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-amber-200">UNDELIVERED</span>`;
+
+                // Status is now a clickable toggle button (instant AJAX update, no page reload)
+                const statusBtn = isDel
+                    ? `<button class="status-toggle-btn bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold text-[10px] px-2 py-1 rounded-full border border-emerald-200 transition" data-id="${item.id}" title="Click to mark UNDELIVERED">DELIVERED</button>`
+                    : `<button class="status-toggle-btn bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold text-[10px] px-2 py-1 rounded-full border border-amber-200 transition" data-id="${item.id}" title="Click to mark DELIVERED">UNDELIVERED</button>`;
+
+                const remarksPreview = item.remarks ? escapeHtml(item.remarks) : '<span class="text-slate-300 italic">—</span>';
 
                 tr.innerHTML = `
                     <td class="px-3 py-3 text-slate-500 whitespace-nowrap">${dDate}</td>
-                    <td class="px-3 py-3 font-mono font-semibold text-slate-900">${item.sales_order}</td>
-                    <td class="px-3 py-3 font-mono text-slate-600">${item.picklist}</td>
-                    <td class="px-3 py-3 text-slate-600 whitespace-nowrap">${item.required_delivery_date || '--'}</td>
-                    <td class="px-3 py-3 font-medium text-slate-800 truncate max-w-[150px]" title="${item.customer_name}">${item.customer_name}</td>
-                    <td class="px-3 py-3 text-slate-600 max-w-[180px] truncate" title="${item.material_code} - ${item.material_description}">${item.material_code}</td>
+                    <td class="px-3 py-3 font-mono font-semibold text-slate-900">${escapeHtml(item.sales_order)}</td>
+                    <td class="px-3 py-3 font-mono text-slate-600">${escapeHtml(item.picklist)}</td>
+                    <td class="px-3 py-3 text-slate-600 whitespace-nowrap">${escapeHtml(item.required_delivery_date) || '--'}</td>
+                    <td class="px-3 py-3 font-medium text-slate-800 truncate max-w-[150px]" title="${escapeHtml(item.customer_name)}">${escapeHtml(item.customer_name)}</td>
+                    <td class="px-3 py-3 text-slate-600 max-w-[180px] truncate" title="${escapeHtml(item.material_code)} - ${escapeHtml(item.material_description)}">${escapeHtml(item.material_code)}</td>
                     <td class="px-3 py-3 text-right font-bold text-slate-900">${parseFloat(item.qty).toLocaleString()}</td>
-                    <td class="px-3 py-3 font-mono text-blue-600 font-medium">${item.batch_code}</td>
-                    <td class="px-3 py-3 text-amber-700 font-medium whitespace-nowrap">${item.expiration_date || '--'}</td>
-                    <td class="px-3 py-3 text-slate-500 max-w-[120px] truncate" title="${item.whse_order}">${item.whse_order}</td>
-                    <td class="px-3 py-3 text-center">${badge}</td>
+                    <td class="px-3 py-3 font-mono text-blue-600 font-medium">${escapeHtml(item.batch_code)}</td>
+                    <td class="px-3 py-3 text-amber-700 font-medium whitespace-nowrap">${escapeHtml(item.expiration_date) || '--'}</td>
+                    <td class="px-3 py-3 text-slate-500 max-w-[120px] truncate" title="${escapeHtml(item.whse_order)}">${escapeHtml(item.whse_order)}</td>
+                    <td class="px-3 py-3 text-center">${statusBtn}</td>
+                    <td class="px-3 py-3 text-slate-500 max-w-[160px] truncate" title="${remarksPreview === '' ? '' : escapeHtml(item.remarks || '')}">${remarksPreview}</td>
+                    <td class="px-3 py-3 text-center whitespace-nowrap">
+                        <button class="ledger-edit-btn text-blue-600 hover:text-blue-800 font-semibold mr-2" data-id="${item.id}">✏️ Edit</button>
+                        <button class="ledger-delete-btn text-red-600 hover:text-red-800 font-semibold" data-id="${item.id}">🗑️</button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
+            });
+        }
+
+        // Toggle DELIVERED <-> UNDELIVERED instantly via fetch/AJAX, no page reload.
+        async function toggleDeliveryStatus(id) {
+            const item = currentLedgerData.find(r => r.id === id);
+            if (!item) return;
+            const nextStatus = (item.status || '').toUpperCase() === 'DELIVERED' ? 'UNDELIVERED' : 'DELIVERED';
+
+            const { error } = await _supabase.from('reservations').update({ status: nextStatus }).eq('id', id);
+            if (error) {
+                alert(`Status update failed: ${error.message}`);
+                return;
+            }
+            // Keep the masterdel reference table synchronized with the same picklist's status
+            await _supabase.from('masterdel').update({ status: nextStatus }).eq('picklist_no', item.picklist);
+
+            item.status = nextStatus;
+            loadAllReservationsLedger();
+        }
+
+        async function deleteReservationRow(id) {
+            if (!confirm("Delete this reservation log entry? This cannot be undone.")) return;
+            const { error } = await _supabase.from('reservations').delete().eq('id', id);
+            if (error) {
+                alert(`Delete failed: ${error.message}`);
+            } else {
+                loadAllReservationsLedger();
+            }
+        }
+
+        // Event delegation for ledger row actions (toggle / edit / delete)
+        function setupLedgerActions() {
+            document.getElementById('ledgerTableBody').addEventListener('click', (e) => {
+                const toggleBtn = e.target.closest('.status-toggle-btn');
+                const editBtn = e.target.closest('.ledger-edit-btn');
+                const deleteBtn = e.target.closest('.ledger-delete-btn');
+
+                if (toggleBtn) {
+                    toggleDeliveryStatus(parseInt(toggleBtn.dataset.id, 10));
+                }
+                if (editBtn) {
+                    const item = currentLedgerData.find(r => r.id === parseInt(editBtn.dataset.id, 10));
+                    if (item) openEditModal(item);
+                }
+                if (deleteBtn) {
+                    deleteReservationRow(parseInt(deleteBtn.dataset.id, 10));
+                }
+            });
+
+            document.getElementById('refreshLedgerBtn').addEventListener('click', () => loadAllReservationsLedger());
+            document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => loadAllReservationsLedger(), 300));
+        }
+
+        // ---------- Edit Reservation Modal Logic ----------
+        function openEditModal(item) {
+            document.getElementById('editRecordId').value = item.id;
+            document.getElementById('editSalesOrder').value = item.sales_order || '';
+            document.getElementById('editPicklist').value = item.picklist || '';
+            document.getElementById('editRDD').value = item.required_delivery_date || '';
+            document.getElementById('editCustomerName').value = item.customer_name || '';
+            document.getElementById('editMaterialCode').value = item.material_code || '';
+            document.getElementById('editMaterialDesc').value = item.material_description || '';
+            document.getElementById('editQty').value = item.qty || '';
+            document.getElementById('editBatchCode').value = item.batch_code || '';
+            document.getElementById('editExpirationDate').value = item.expiration_date || '';
+            document.getElementById('editWhseOrder').value = item.whse_order || '';
+            document.getElementById('editStatus').value = (item.status || 'UNDELIVERED').toUpperCase();
+            document.getElementById('editRemarks').value = item.remarks || '';
+
+            const modal = document.getElementById('editReservationModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editReservationModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function setupEditModal() {
+            document.getElementById('editModalCloseBtn').addEventListener('click', closeEditModal);
+            document.getElementById('editModalCancelBtn').addEventListener('click', closeEditModal);
+
+            document.getElementById('editAppendNoteBtn').addEventListener('click', () => {
+                const ta = document.getElementById('editRemarks');
+                const stamp = new Date().toLocaleString();
+                const currentUser = sessionStorage.getItem(AUTH_SESSION_KEY) || 'user';
+                const prefix = ta.value.trim() ? '\n' : '';
+                ta.value += `${prefix}[${stamp} — ${currentUser}] `;
+                ta.focus();
+                ta.selectionStart = ta.selectionEnd = ta.value.length;
+            });
+
+            document.getElementById('editModalSaveBtn').addEventListener('click', async () => {
+                const id = parseInt(document.getElementById('editRecordId').value, 10);
+                const salesOrder = document.getElementById('editSalesOrder').value.trim();
+                const picklist = document.getElementById('editPicklist').value.trim();
+
+                if (!/^\d{10}$/.test(salesOrder) || !/^\d{10}$/.test(picklist)) {
+                    alert("⚠️ Sales Order and Picklist must be exactly 10 digits.");
+                    return;
+                }
+
+                const payload = {
+                    sales_order: salesOrder,
+                    picklist: picklist,
+                    required_delivery_date: document.getElementById('editRDD').value,
+                    customer_name: document.getElementById('editCustomerName').value.trim(),
+                    material_code: document.getElementById('editMaterialCode').value.trim(),
+                    material_description: document.getElementById('editMaterialDesc').value.trim(),
+                    qty: parseFloat(document.getElementById('editQty').value) || 0,
+                    batch_code: document.getElementById('editBatchCode').value.trim(),
+                    expiration_date: document.getElementById('editExpirationDate').value.trim(),
+                    whse_order: document.getElementById('editWhseOrder').value.trim(),
+                    status: document.getElementById('editStatus').value,
+                    remarks: document.getElementById('editRemarks').value
+                };
+
+                const { error } = await _supabase.from('reservations').update(payload).eq('id', id);
+                if (error) {
+                    alert(`❌ Update failed: ${error.message}`);
+                    return;
+                }
+
+                // Keep masterdel in sync with any status edit made here too
+                await _supabase.from('masterdel').update({ status: payload.status }).eq('picklist_no', payload.picklist);
+
+                closeEditModal();
+                loadAllReservationsLedger();
+            });
+
+            document.getElementById('editModalDeleteBtn').addEventListener('click', async () => {
+                const id = parseInt(document.getElementById('editRecordId').value, 10);
+                if (!confirm("Delete this reservation log entry? This cannot be undone.")) return;
+
+                const { error } = await _supabase.from('reservations').delete().eq('id', id);
+                if (error) {
+                    alert(`Delete failed: ${error.message}`);
+                    return;
+                }
+                closeEditModal();
+                loadAllReservationsLedger();
             });
         }
 

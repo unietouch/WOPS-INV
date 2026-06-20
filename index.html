@@ -266,12 +266,48 @@
                         <h2 class="text-xl font-bold text-slate-900">All Reservations Transactional Ledger</h2>
                         <p class="text-sm text-slate-500 mt-0.5">Comprehensive structural log stream tracking warehouse operations.</p>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <input type="text" id="ledgerSearchInput" placeholder="Search Customer/SO/Picklist..." class="border border-slate-300 text-xs rounded-lg px-3 py-2 w-56 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button id="refreshLedgerBtn" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm">
-                            🔄 Refresh Data
-                        </button>
+                </div>
+
+                <div class="flex flex-wrap items-end gap-2 mb-4">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Search</label>
+                        <input type="text" id="ledgerSearchInput" placeholder="Customer/SO/Picklist..." class="border border-slate-300 text-xs rounded-lg px-3 py-2 w-44 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Customer</label>
+                        <select id="ledgerFilterCustomer" class="border border-slate-300 text-xs rounded-lg px-3 py-2 w-40 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Customers</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Material</label>
+                        <select id="ledgerFilterMaterial" class="border border-slate-300 text-xs rounded-lg px-3 py-2 w-44 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Materials</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Status</label>
+                        <select id="ledgerFilterStatus" class="border border-slate-300 text-xs rounded-lg px-3 py-2 w-36 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Status</option>
+                            <option value="DELIVERED">DELIVERED</option>
+                            <option value="UNDELIVERED">UNDELIVERED</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Rows / Page</label>
+                        <select id="ledgerPageSizeSelect" class="border border-slate-300 text-xs rounded-lg px-3 py-2 w-24 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="100" selected>100</option>
+                            <option value="250">250</option>
+                            <option value="500">500</option>
+                            <option value="1000">1000</option>
+                        </select>
+                    </div>
+                    <button id="ledgerClearFiltersBtn" class="border border-slate-300 hover:bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-2 rounded-lg transition">
+                        ✖ Clear Filters
+                    </button>
+                    <button id="refreshLedgerBtn" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm md:ml-auto">
+                        🔄 Refresh Data
+                    </button>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -299,6 +335,15 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-2 border-t border-slate-200">
+                    <p id="ledgerPaginationInfo" class="text-xs text-slate-500">Loading...</p>
+                    <div class="flex items-center gap-2">
+                        <button id="ledgerPrevBtn" class="border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition">← Back</button>
+                        <span id="ledgerPageIndicator" class="text-xs text-slate-600 font-semibold px-2">Page 1</span>
+                        <button id="ledgerNextBtn" class="border border-slate-300 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition">Next →</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -392,6 +437,9 @@
         let currentLedgerData = [];   // cached rows from the last ledger fetch (used by Edit/Delete/Toggle actions)
         let ledgerSortKey = 'date_of_entry';   // currently active sort column for All Reservation Logs
         let ledgerSortDir = 'desc';            // 'asc' | 'desc'
+        let ledgerPage = 0;            // zero-indexed current page for the All Reservations Ledger
+        let ledgerPageSize = 100;      // rows per page (selectable: 100 / 250 / 500 / 1000)
+        let ledgerTotalCount = 0;      // total matching rows reported by the last query (for pagination UI)
         let appInitialized = false;   // guards against re-running setup listeners twice
 
         // ============================================================
@@ -549,11 +597,34 @@
                 globalMaterialsMap = {};
                 materialData.forEach(m => { globalMaterialsMap[m.material_code] = m.material_description; });
 
+                populateLedgerFilterDropdowns();
+
                 console.log(`[Database Pipeline Success] Synchronized arrays. Customers: ${allCustomers.length}, Materials: ${allMaterials.length}`);
             } catch (err) {
                 console.error("[Data Import Exception Log]", err);
                 alert(`Backend Sync Notice: Issue processing lookups from database.\nDetails: ${err.message || err}`);
             }
+        }
+
+        // Fills the Customer / Material filter <select> elements on the All
+        // Reservations Ledger from the globally cached lookup arrays, while
+        // preserving whatever the user currently has selected (if still valid).
+        function populateLedgerFilterDropdowns() {
+            const customerSelect = document.getElementById('ledgerFilterCustomer');
+            const materialSelect = document.getElementById('ledgerFilterMaterial');
+            if (!customerSelect || !materialSelect) return;
+
+            const prevCustomerVal = customerSelect.value;
+            const prevMaterialVal = materialSelect.value;
+
+            customerSelect.innerHTML = '<option value="">All Customers</option>' +
+                allCustomers.map(c => `<option value="${escapeHtml(c.customer_name)}">${escapeHtml(c.customer_name)}</option>`).join('');
+
+            materialSelect.innerHTML = '<option value="">All Materials</option>' +
+                allMaterials.map(m => `<option value="${escapeHtml(m.material_code)}">${escapeHtml(m.material_code)} — ${escapeHtml(m.material_description || '')}</option>`).join('');
+
+            if ([...customerSelect.options].some(o => o.value === prevCustomerVal)) customerSelect.value = prevCustomerVal;
+            if ([...materialSelect.options].some(o => o.value === prevMaterialVal)) materialSelect.value = prevMaterialVal;
         }
 
         async function refreshAllLocalLedgerTables() {
@@ -1147,16 +1218,32 @@
         async function loadAllReservationsLedger() {
             const tbody = document.getElementById('ledgerTableBody');
             const searchVal = document.getElementById('ledgerSearchInput').value.trim();
+            const customerVal = document.getElementById('ledgerFilterCustomer').value;
+            const materialVal = document.getElementById('ledgerFilterMaterial').value;
+            const statusVal = document.getElementById('ledgerFilterStatus').value;
             tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-6 text-center text-slate-400 italic">Streaming live operational databases records...</td></tr>`;
 
-            let query = _supabase.from('reservations').select('*');
+            // Request an exact count alongside the page of rows so we can build
+            // the pagination footer (total pages / Showing X-Y of Z).
+            let query = _supabase.from('reservations').select('*', { count: 'exact' });
 
             if (searchVal) {
                 query = query.or(`sales_order.ilike.%${searchVal}%,picklist.ilike.%${searchVal}%,customer_name.ilike.%${searchVal}%`);
             }
+            if (customerVal) {
+                query = query.eq('customer_name', customerVal);
+            }
+            if (materialVal) {
+                query = query.eq('material_code', materialVal);
+            }
+            if (statusVal) {
+                query = query.eq('status', statusVal);
+            }
 
-            // Cap display visualization to safe execution size bounds
-            const { data, error } = await query.order('date_of_entry', { ascending: false }).range(0, 49);
+            const rangeStart = ledgerPage * ledgerPageSize;
+            const rangeEnd = rangeStart + ledgerPageSize - 1;
+
+            const { data, error, count } = await query.order('date_of_entry', { ascending: false }).range(rangeStart, rangeEnd);
 
             if (error) {
                 tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-4 text-center text-red-500 font-semibold">Ledger Pipeline Failure: ${error.message}</td></tr>`;
@@ -1164,8 +1251,41 @@
             }
 
             currentLedgerData = data || [];
+            ledgerTotalCount = count || 0;
+
+            // If a filter/search change leaves the current page past the new
+            // last page (e.g. you were on page 5 and a filter now only has 2
+            // pages of results), snap back to the last valid page and refetch.
+            const totalPages = ledgerTotalCount === 0 ? 1 : Math.ceil(ledgerTotalCount / ledgerPageSize);
+            if (ledgerPage > 0 && ledgerPage >= totalPages) {
+                ledgerPage = totalPages - 1;
+                loadAllReservationsLedger();
+                return;
+            }
+
             applyLedgerSort();
             renderLedgerRows();
+            updateLedgerPaginationUI();
+        }
+
+        // Updates the "Showing X-Y of Z" text, the page indicator, and the
+        // enabled/disabled state of the Back / Next pagination buttons.
+        function updateLedgerPaginationUI() {
+            const infoEl = document.getElementById('ledgerPaginationInfo');
+            const pageIndicatorEl = document.getElementById('ledgerPageIndicator');
+            const prevBtn = document.getElementById('ledgerPrevBtn');
+            const nextBtn = document.getElementById('ledgerNextBtn');
+            if (!infoEl || !pageIndicatorEl || !prevBtn || !nextBtn) return;
+
+            const totalPages = ledgerTotalCount === 0 ? 1 : Math.ceil(ledgerTotalCount / ledgerPageSize);
+            const rangeStart = ledgerTotalCount === 0 ? 0 : (ledgerPage * ledgerPageSize) + 1;
+            const rangeEnd = Math.min((ledgerPage + 1) * ledgerPageSize, ledgerTotalCount);
+
+            infoEl.textContent = `Showing ${rangeStart}-${rangeEnd} of ${ledgerTotalCount} records`;
+            pageIndicatorEl.textContent = `Page ${ledgerPage + 1} of ${totalPages}`;
+
+            prevBtn.disabled = ledgerPage <= 0;
+            nextBtn.disabled = (ledgerPage + 1) >= totalPages;
         }
 
         // Sorts currentLedgerData in place according to ledgerSortKey/ledgerSortDir.
@@ -1311,7 +1431,42 @@
             });
 
             document.getElementById('refreshLedgerBtn').addEventListener('click', () => loadAllReservationsLedger());
-            document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => loadAllReservationsLedger(), 300));
+            document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => { ledgerPage = 0; loadAllReservationsLedger(); }, 300));
+
+            // Filter dropdowns — any change resets to page 1 and refetches
+            document.getElementById('ledgerFilterCustomer').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
+            document.getElementById('ledgerFilterMaterial').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
+            document.getElementById('ledgerFilterStatus').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
+
+            document.getElementById('ledgerPageSizeSelect').addEventListener('change', (e) => {
+                ledgerPageSize = parseInt(e.target.value, 10) || 100;
+                ledgerPage = 0;
+                loadAllReservationsLedger();
+            });
+
+            document.getElementById('ledgerClearFiltersBtn').addEventListener('click', () => {
+                document.getElementById('ledgerSearchInput').value = '';
+                document.getElementById('ledgerFilterCustomer').value = '';
+                document.getElementById('ledgerFilterMaterial').value = '';
+                document.getElementById('ledgerFilterStatus').value = '';
+                ledgerPage = 0;
+                loadAllReservationsLedger();
+            });
+
+            document.getElementById('ledgerPrevBtn').addEventListener('click', () => {
+                if (ledgerPage > 0) {
+                    ledgerPage--;
+                    loadAllReservationsLedger();
+                }
+            });
+
+            document.getElementById('ledgerNextBtn').addEventListener('click', () => {
+                const totalPages = ledgerTotalCount === 0 ? 1 : Math.ceil(ledgerTotalCount / ledgerPageSize);
+                if (ledgerPage + 1 < totalPages) {
+                    ledgerPage++;
+                    loadAllReservationsLedger();
+                }
+            });
 
             // Sortable column headers — click to sort, click again to reverse direction
             document.querySelectorAll('.ledger-sort-th').forEach(th => {

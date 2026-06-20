@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Hub: Central Reservation Engine</title>
+    <!-- Tailwind CSS with Dark Mode Class support enabled -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Smooth collapsing transitions */
+        .sidebar-transition {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Handle sidebar text hiding elegantly */
+        #sidebar.collapsed .sidebar-text {
+            display: none;
+        }
+        #sidebar.collapsed .sidebar-logo-text {
+            display: none;
+        }
+        #sidebar.collapsed .sidebar-item {
+            justify-content: center;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+        #sidebar.collapsed .sidebar-item svg {
+            margin-right: 0;
+        }
+        /* Custom scrollbar matching professional layout */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .light ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 font-sans min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-300">
+
+    <!-- ============================================================
+         LOGIN GATE (Preserved exact credentials authentication gate)
+         ============================================================ -->
+    <div id="loginOverlay" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-xl shadow-2xl p-8 border border-slate-100 dark:border-slate-800 transition-all">
+            <div class="text-center mb-6">
+                <div class="text-3xl mb-2">🔐</div>
+                <h1 class="text-xl font-bold text-slate-900 dark:text-white">Logistics Hub Access</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Sign in with your assigned operational credentials.</p>
+            </div>
+            <form id="loginForm" class="space-y-4" novalidate>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Username</label>
+                    <input type="text" id="loginUsername" autocomplete="username" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Password</label>
+                    <input type="password" id="loginPassword" autocomplete="current-password" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </div>
+                <p id="loginError" class="text-xs text-red-600 dark:text-red-400 h-4 font-semibold"></p>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-md transition duration-150">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MAIN CONTAINER (Sidebar + Canvas wrapper)
+         ============================================================ -->
+    <div id="appShell" class="hidden flex min-h-screen">
+
+        <!-- 1. Collapsible Sidebar Drawer Panel -->
+        <aside id="sidebar" class="sidebar-transition w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 flex-shrink-0 flex flex-col justify-between border-r border-slate-800">
+            <div>
+                <!-- Sidebar Logo & Header Header -->
+                <div class="px-5 py-4 flex items-center justify-between border-b border-slate-800 h-16">
+                    <div class="flex items-center gap-2.5 overflow-hidden">
+                        <span class="text-xl">📦</span>
+                        <div class="sidebar-logo-text truncate">
+                            <h1 class="text-sm font-extrabold tracking-wider text-white">WOPS - PBD</h1>
+                            <p class="text-[9px] text-blue-400 font-semibold uppercase tracking-widest">FEFO Engine</p>
+                        </div>
+                    </div>
+                    <!-- Minimize Collapse Button -->
+                    <button id="sidebarCollapseBtn" class="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded transition" title="Minimize Workspace">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+                    </button>
+                </div>
+
+                <!-- Structured Nav Tab Items -->
+                <nav class="p-3 space-y-1.5">
+                    <button id="tabBtnReservation" class="sidebar-item tab-btn w-full flex items-center px-3.5 py-3 text-xs font-bold rounded-lg bg-blue-600 text-white transition">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        <span class="sidebar-text">Registration Entry</span>
+                    </button>
+                    <button id="tabBtnAllReservations" class="sidebar-item tab-btn w-full flex items-center px-3.5 py-3 text-xs font-bold rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span class="sidebar-text">All Reservation Logs</span>
+                    </button>
+                    <button id="tabBtnReport" class="sidebar-item tab-btn w-full flex items-center px-3.5 py-3 text-xs font-bold rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"/></svg>
+                        <span class="sidebar-text">Report</span>
+                    </button>
+                    <button id="tabBtnMasterDB" class="sidebar-item tab-btn w-full flex items-center px-3.5 py-3 text-xs font-bold rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        <span class="sidebar-text">MasterDB</span>
+                    </button>
+                    <button id="tabBtnCustomerDB" class="sidebar-item tab-btn w-full flex items-center px-3.5 py-3 text-xs font-bold rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                        <span class="sidebar-text">Customer</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Profile Badge + Theme Toggles Segment -->
+            <div class="p-3 border-t border-slate-800 space-y-2">
+                <!-- Theme Toggle Button -->
+                <button id="themeToggleBtn" class="w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Toggle Light/Dark Theme">
+                    <span class="sidebar-text font-semibold">Theme</span>
+                    <span>
+                        <!-- Sun Icon (Show in Dark Mode) -->
+                        <svg id="sunIcon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 2.293a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM16 10a1 1 0 110-2h1a1 1 0 110 2h-1zm-1.707 4a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.707 14.293a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM3 10a1 1 0 110-2h1a1 1 0 110 2H3zm2.293-5.707a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM10 5a5 5 0 100 10 5 5 0 000-10z"/></svg>
+                        <!-- Moon Icon (Show in Light Mode) -->
+                        <svg id="moonIcon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+                    </span>
+                </button>
+                <div class="px-3 py-2 bg-slate-950/50 rounded-lg text-slate-400 overflow-hidden">
+                    <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500 sidebar-text">Operator</p>
+                    <p id="currentUserLabel" class="text-xs font-bold text-white truncate"></p>
+                </div>
+                <button id="logoutBtn" class="w-full flex items-center justify-center py-2 px-3 text-xs bg-red-950/40 hover:bg-red-800 text-red-300 hover:text-white rounded-lg border border-red-900/30 transition font-bold gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span class="sidebar-text">Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 2. Main Workspace Panel Canvas -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- Top Unified Header -->
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between h-16">
+                <div>
+                    <h2 id="headerTabTitle" class="text-base font-bold text-slate-800 dark:text-white">Registration Entry</h2>
+                    <p id="headerTabDesc" class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold tracking-wider uppercase mt-0.5">FEFO Monitoring &amp; Recording Workspace</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 font-bold">V3.0 Smart Engine</span>
+                </div>
+            </header>
+
+            <main class="flex-1 p-6 overflow-y-auto">
+
+                <!-- TAB 1: REGISTRATION RECORD ENTRY VIEW -->
+                <div id="tabReservationView" class="tab-content space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        
+                        <!-- Input Recording Panel -->
+                        <div class="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                            <h2 class="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3 mb-6">Reservation Record Entry</h2>
+                            <form id="reservationForm" class="space-y-5" novalidate>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Date of Entry (Auto)</label>
+                                        <input type="text" id="dateOfEntry" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-500 cursor-not-allowed font-semibold focus:outline-none" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Status (Auto lookup via Picklist)</label>
+                                        <input type="text" id="status" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-extrabold text-blue-600 dark:text-blue-400 cursor-not-allowed focus:outline-none" value="UNDELIVERED" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Sales Order <span class="text-red-500">*</span></label>
+                                        <input type="text" id="salesOrder" maxlength="10" inputmode="numeric" placeholder="e.g. 1200344567" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                                        <p id="salesOrderHint" class="text-[10px] mt-1 h-4"></p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Picklist <span class="text-red-500">*</span></label>
+                                        <input type="text" id="picklist" maxlength="10" inputmode="numeric" placeholder="e.g. 6050112234" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Req. Delivery Date <span class="text-red-500">*</span></label>
+                                        <input type="date" id="reqDeliveryDate" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                                    </div>
+                                    <div class="relative">
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Customer Name <span class="text-red-500">*</span></label>
+                                        <input type="text" id="customerName" autocomplete="off" placeholder="Search..." class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                                        <div id="customerSuggestions" class="hidden absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                                        <p id="customerHint" class="text-[10px] mt-1 h-4"></p>
+                                    </div>
+                                    <div class="relative">
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Material Code <span class="text-red-500">*</span></label>
+                                        <input type="text" id="materialCode" autocomplete="off" placeholder="Search..." class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono transition">
+                                        <div id="materialSuggestions" class="hidden absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                                        <p id="materialHint" class="text-[10px] mt-1 h-4"></p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Material Description (Auto-Filled)</label>
+                                    <input type="text" id="materialDesc" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-600 dark:text-slate-300 cursor-not-allowed focus:outline-none" readonly placeholder="Auto-populated from code lookup...">
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Quantity <span class="text-red-500">*</span></label>
+                                        <input type="number" id="qty" step="any" placeholder="Numeric value" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Batch Code <span class="text-red-500">*</span></label>
+                                        <input type="text" id="batchCode" placeholder="e.g. BB122727" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Expiration Date (Locked)</label>
+                                        <input type="text" id="expirationDate" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-600 dark:text-slate-300 font-bold cursor-not-allowed focus:outline-none" readonly placeholder="Calculated from batch code...">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Warehouse Order <span class="text-red-500">*</span></label>
+                                    <input type="text" id="whseOrder" placeholder="Warehouse reference metadata details..." class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                                </div>
+
+                                <div class="pt-2">
+                                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 px-4 rounded-lg shadow-md transition">
+                                        Commit Reservation Record
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- FEFO Stream Insights Visual Panel Container -->
+                        <div class="lg:col-span-5 bg-slate-900 text-white p-6 rounded-xl shadow-md border border-slate-800 self-start">
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                                <h2 class="text-sm font-bold tracking-wider text-blue-400 uppercase">📊 Real-Time FEFO Insights</h2>
+                                <span class="text-[9px] uppercase font-mono tracking-wider bg-slate-800 text-blue-300 px-2 py-0.5 rounded border border-slate-700 font-bold">Dynamic Stream</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-4">Displays matched records for the exact Customer + Material combination only, sorted by First Expired, First Out execution sequencing metrics.</p>
+
+                            <div id="fefoTargetMetaData" class="mb-4 bg-slate-950 p-3 rounded-lg border border-slate-800 hidden">
+                                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Stream Filter</div>
+                                <div id="fefoFilterItem" class="text-xs font-mono text-emerald-400 font-bold mt-0.5">--</div>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-[11px]">
+                                    <thead>
+                                        <tr class="text-slate-400 border-b border-slate-800 uppercase text-[9px] tracking-wider">
+                                            <th class="pb-2 font-bold">Sales Order</th>
+                                            <th class="pb-2 font-bold">RDD</th>
+                                            <th class="pb-2 font-bold">Customer</th>
+                                            <th class="pb-2 font-bold">Batch</th>
+                                            <th class="pb-2 font-bold text-right">Qty</th>
+                                            <th class="pb-2 font-bold text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fefoInsightsMainBody" class="divide-y divide-slate-800 text-slate-200">
+                                        <tr>
+                                            <td colspan="6" class="py-8 text-center text-slate-500 italic">Select a Customer Name AND a Material Code inside the entry module fields to stream matched inventory analytics...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: TRANSACTIONAL LEDGER VIEW -->
+                <div id="tabAllReservationsView" class="tab-content hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900 dark:text-white">All Reservations Transactional Ledger</h2>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Comprehensive structural log stream tracking warehouse operations.</p>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Filter Operations Grid Panel -->
+                        <div class="flex flex-wrap items-end gap-2.5 mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Search</label>
+                                <input type="text" id="ledgerSearchInput" placeholder="SO, Customer or Picklist..." class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Customer Filter</label>
+                                <select id="ledgerFilterCustomer" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-40 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Customers</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Material Filter</label>
+                                <select id="ledgerFilterMaterial" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Materials</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Status Filter</label>
+                                <select id="ledgerFilterStatus" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Statuses</option>
+                                    <option value="DELIVERED">DELIVERED</option>
+                                    <option value="UNDELIVERED">UNDELIVERED</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Rows per Page</label>
+                                <select id="ledgerPageSizeSelect" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-24 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="100" selected>100</option>
+                                    <option value="250">250</option>
+                                    <option value="500">500</option>
+                                    <option value="1000">1000</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 ml-auto w-full md:w-auto mt-2 md:mt-0">
+                                <button id="ledgerClearFiltersBtn" class="border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg transition" title="Reset Filters">
+                                    ✖ Clear
+                                </button>
+                                <button id="openBulkStatusModalBtn" class="border border-blue-200 bg-blue-50 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-2 rounded-lg transition">
+                                    📋 Bulk Paste Updates
+                                </button>
+                                <button id="exportUndeliveredBtn" class="border border-amber-200 bg-amber-50 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 text-xs font-bold px-3 py-2 rounded-lg transition">
+                                    ⬇️ Undelivered
+                                </button>
+                                <button id="exportDeliveredBtn" class="border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold px-3 py-2 rounded-lg transition">
+                                    ⬇️ Delivered
+                                </button>
+                                <button id="refreshLedgerBtn" class="bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Data Stream Table Panel Wrapper -->
+                        <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="date_of_entry">Entry Date <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="sales_order">Sales Order <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="picklist">Picklist <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="required_delivery_date">RDD <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="customer_name">Customer Name <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="material_code">Material <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 text-right ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="qty">Qty <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="batch_code">Batch <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="expiration_date">Expiry Date <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="whse_order">Whse Order <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5 text-center ledger-sort-th cursor-pointer select-none hover:text-slate-900 dark:hover:text-white" data-sort-key="status">Status <span class="sort-indicator text-blue-500 ml-1"></span></th>
+                                        <th class="px-3 py-3.5">Remarks</th>
+                                        <th class="px-3 py-3.5 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledgerTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Initializing transactional pipeline log streams...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination Navigation Segment -->
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+                            <p id="ledgerPaginationInfo" class="text-xs text-slate-500 dark:text-slate-400 font-medium">Loading pagination metrics...</p>
+                            <div class="flex items-center gap-2">
+                                <button id="ledgerPrevBtn" class="border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 text-xs font-bold px-3.5 py-1.5 rounded-lg transition">← Back</button>
+                                <span id="ledgerPageIndicator" class="text-xs text-slate-700 dark:text-slate-300 font-extrabold px-2">Page 1</span>
+                                <button id="ledgerNextBtn" class="border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 text-xs font-bold px-3.5 py-1.5 rounded-lg transition font-bold">Next →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: REPORT MODULE [NEW MODULE VIEW] -->
+                <div id="tabReportView" class="tab-content hidden space-y-6">
+                    <!-- KPI Analytics Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Active Reservations</p>
+                            <h3 id="reportKpiActive" class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">0</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Status: UNDELIVERED</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Dispatched Records</p>
+                            <h3 id="reportKpiCompleted" class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">0</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Status: DELIVERED</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">FEFO Violation Warnings</p>
+                            <h3 id="reportKpiViolations" class="text-2xl font-black text-red-600 dark:text-red-400 mt-1">0</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Sequential Expiry Mismatch</p>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Average Backlog Aging</p>
+                            <h3 id="reportKpiAvgAge" class="text-2xl font-black text-amber-600 dark:text-amber-500 mt-1">0 Days</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Active orders system delay</p>
+                        </div>
+                    </div>
+
+                    <!-- Layout Sub-Navigation Toggles -->
+                    <div class="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <button id="reportSubTabFEFO" class="px-4 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white shadow-sm transition">
+                            ⚠️ FEFO Violations Log
+                        </button>
+                        <button id="reportSubTabGaps" class="px-4 py-2 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                            ⏳ Order Aging &amp; Date Gaps
+                        </button>
+                    </div>
+
+                    <!-- 3A: FEFO Violations Summary Panel -->
+                    <div id="reportSectionFEFO" class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-slate-900 dark:text-white">FEFO Sequencing Alerts</h3>
+                            <p class="text-xs text-slate-400 dark:text-slate-500">Highlighted entries where newer inventory items were dispatched ahead of older batches of the same material [2].</p>
+                        </div>
+                        <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px] border-b border-slate-200 dark:border-slate-700">
+                                        <th class="px-3 py-3">Material Group</th>
+                                        <th class="px-3 py-3 text-red-600 dark:text-red-400 font-bold">Newer Issued First (Violation Instance)</th>
+                                        <th class="px-3 py-3 text-amber-600 dark:text-amber-500 font-bold">Older Left Behind (Bypassed Instance)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fefoViolationsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="3" class="px-3 py-8 text-center text-slate-400 italic">No violations detected in records database.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3B: Open Active Gaps Summary Panel -->
+                    <div id="reportSectionGaps" class="hidden bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-slate-900 dark:text-white">Active Backlogs &amp; Recorded Aging</h3>
+                            <p class="text-xs text-slate-400 dark:text-slate-500">Calculated span (in days) between the creation entry timestamp and today's date for active undelivered bookings [2].</p>
+                        </div>
+                        <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px] border-b border-slate-200 dark:border-slate-700">
+                                        <th class="px-3 py-3">Sales Order</th>
+                                        <th class="px-3 py-3">Picklist</th>
+                                        <th class="px-3 py-3">Customer Name</th>
+                                        <th class="px-3 py-3">Material</th>
+                                        <th class="px-3 py-3">Date Recorded</th>
+                                        <th class="px-3 py-3 text-right">Recorded Age</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agingGapsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="6" class="px-3 py-8 text-center text-slate-400 italic">No active bookings detected to run gap parameters against.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: MATERIALS REGISTRY VIEW -->
+                <div id="tabMasterDBView" class="tab-content hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3 mb-2">Materials Master Registry</h2>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-6">Create or update structural SKU parameters inside index registry records.</p>
+                        
+                        <form id="masterDBForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-6" novalidate>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Material Code <span class="text-red-500">*</span></label>
+                                <input type="text" id="mdbCode" placeholder="e.g. RB713321NF" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Material Description <span class="text-red-500">*</span></label>
+                                <input type="text" id="mdbDesc" placeholder="e.g. TERIYAKI SAUCE 12X1KG" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition">
+                                💾 Upsert Material Entry
+                            </button>
+                        </form>
+
+                        <div class="overflow-x-auto max-h-[520px] overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-800">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="sticky top-0 bg-slate-50 dark:bg-slate-800">
+                                    <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                        <th class="px-4 py-3">Material Code</th>
+                                        <th class="px-4 py-3">Material Description</th>
+                                        <th class="px-4 py-3 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mdbTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="3" class="px-4 py-4 text-center text-slate-400 italic">No master materials loaded yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: CUSTOMER DIRECTORY VIEW -->
+                <div id="tabCustomerDBView" class="tab-content hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3 mb-2">Customer Account Index</h2>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-6">Manage registered customer account name parameters.</p>
+
+                        <form id="customerDBForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-6" novalidate>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Customer Account Name <span class="text-red-500">*</span></label>
+                                <input type="text" id="cdbName" placeholder="e.g. BINONDO FOODS QC" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition">
+                                ➕ Register New Customer
+                            </button>
+                        </form>
+
+                        <div class="overflow-x-auto max-w-2xl max-h-[520px] overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-800">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="sticky top-0 bg-slate-50 dark:bg-slate-800">
+                                    <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                        <th class="px-4 py-3">Registered Customer Name</th>
+                                        <th class="px-4 py-3 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cdbTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="2" class="px-4 py-4 text-center text-slate-400 italic">No customer profiles resolved from the master.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         EDIT RESERVATION MODAL (Preserved features)
+         ============================================================ -->
+    <div id="editReservationModal" class="fixed inset-0 z-[90] bg-black/60 hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-slate-100 dark:border-slate-800">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 px-6 py-4 sticky top-0 bg-white dark:bg-slate-900 z-10">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white">Edit Reservation Record</h3>
+                <button id="editModalCloseBtn" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="hidden" id="editRecordId">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Sales Order</label>
+                    <input type="text" id="editSalesOrder" maxlength="10" inputmode="numeric" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Picklist</label>
+                    <input type="text" id="editPicklist" maxlength="10" inputmode="numeric" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Req. Delivery Date</label>
+                    <input type="date" id="editRDD" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Customer Name</label>
+                    <input type="text" id="editCustomerName" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Material Code</label>
+                    <input type="text" id="editMaterialCode" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Material Description</label>
+                    <input type="text" id="editMaterialDesc" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Quantity</label>
+                    <input type="number" step="any" id="editQty" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Batch Code</label>
+                    <input type="text" id="editBatchCode" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Expiration Date <span class="text-slate-400 dark:text-slate-500 normal-case">(e.g. DEC-12-2027)</span></label>
+                    <input type="text" id="editExpirationDate" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Warehouse Order</label>
+                    <input type="text" id="editWhseOrder" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Delivery Status</label>
+                    <select id="editStatus" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="UNDELIVERED">UNDELIVERED</option>
+                        <option value="DELIVERED">DELIVERED</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Remarks / Notes</label>
+                        <button type="button" id="editAppendNoteBtn" class="text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:underline">+ Append Timestamp</button>
+                    </div>
+                    <textarea id="editRemarks" rows="3" placeholder="Add internal logistics tracking notes..." class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-between items-center gap-3 border-t border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50 dark:bg-slate-900 sticky bottom-0 z-10">
+                <button id="editModalDeleteBtn" class="text-red-600 hover:text-red-800 dark:hover:text-red-400 text-xs font-bold flex items-center gap-1.5 transition">
+                    🗑️ Delete Record
+                </button>
+                <div class="flex gap-3">
+                    <button id="editModalCancelBtn" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 px-5 rounded-lg text-xs transition">Cancel</button>
+                    <button id="editModalSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-lg text-xs shadow-md transition">💾 Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         BULK STATUS UPDATE MODAL (Preserved features)
+         ============================================================ -->
+    <div id="bulkStatusModal" class="fixed inset-0 z-[95] bg-black/60 hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-100 dark:border-slate-800">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 px-6 py-4 sticky top-0 bg-white dark:bg-slate-900 z-10">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white">📋 Bulk Status Update — Paste from Excel</h3>
+                <button id="bulkStatusCloseBtn" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Copy two columns from Excel — <strong>Status</strong> and <strong>Picklist</strong> (either order, header row optional) — and paste them below.
+                    Every reservation record matching a picklist number will be updated to that status (e.g. blank/null &rarr; DELIVERED, or DELIVERED &rarr; UNDELIVERED).
+                    Type <code class="bg-slate-100 dark:bg-slate-800 px-1 rounded text-red-600 dark:text-red-400 font-bold">NULL</code> as the status to clear a status back to blank.
+                </p>
+                <textarea id="bulkStatusTextarea" rows="10" spellcheck="false" placeholder="status	picklist
+DELIVERED	6051538118
+DELIVERED	6051538117
+UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+
+                <div id="bulkStatusPreviewWrap" class="hidden">
+                    <p class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Preview <span id="bulkStatusPreviewCount" class="font-normal text-slate-400 dark:text-slate-500"></span></p>
+                    <div id="bulkStatusPreview" class="border border-slate-200 dark:border-slate-800 rounded-lg max-h-56 overflow-y-auto text-xs divide-y divide-slate-100 dark:divide-slate-800"></div>
+                </div>
+
+                <div id="bulkStatusResult" class="hidden text-xs border rounded-lg p-3"></div>
+            </div>
+            <div class="flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50 dark:bg-slate-900 sticky bottom-0 z-10">
+                <button id="bulkStatusParseBtn" class="border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold px-4 py-2.5 rounded-lg transition">🔍 Preview</button>
+                <button id="bulkStatusApplyBtn" disabled class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-md transition">✅ Apply Updates</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         CORE APPLICATION ENGINE JAVASCRIPT
+         ============================================================ -->
+    <script>
+        // Supabase Constants Integration
+        const SUPABASE_URL = "https://husvyiacumxqfxglibwx.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_Mo_b_HNFI83ONCgSneWheg_H161x1MN";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // State Machine Variables
+        let globalMaterialsMap = {};   
+        let allCustomers = [];         
+        let allMaterials = [];
+        let currentLedgerData = [];   
+        let ledgerSortKey = 'date_of_entry';   
+        let ledgerSortDir = 'desc';            
+        let ledgerPage = 0;            
+        let ledgerPageSize = 100;      
+        let ledgerTotalCount = 0;      
+        let bulkStatusParsedEntries = null;   
+        let appInitialized = false;   
+
+        // Safe HTML String Escaper
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Parse Expiration Date string formats (e.g. YYYY-MM-DD or DEC-12-2027) robustly [2]
+        function parseAnyDate(str) {
+            if (!str) return null;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                return new Date(str);
+            }
+            let parts = str.split('-');
+            if (parts.length === 3) {
+                const monthsMap = {"JAN":0,"FEB":1,"MAR":2,"APR":3,"MAY":4,"JUN":5,"JUL":6,"AUG":7,"SEP":8,"OCT":9,"NOV":10,"DEC":11};
+                let month = monthsMap[parts[0].toUpperCase()];
+                if (month !== undefined) {
+                    let day = parseInt(parts[1], 10);
+                    let year = parseInt(parts[2], 10);
+                    return new Date(year, month, day);
+                }
+            }
+            const ts = Date.parse(str);
+            if (!isNaN(ts)) return new Date(ts);
+            return null;
+        }
+
+        // Debounce helper pipeline
+        function debounce(func, delay) {
+            let timer;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        // Authentication Matrix Configuration
+        const AUTH_USERS = {
+            "admin": "superadmin",
+            "R. DIONEDA": "123",
+            "S. MALABARBAS": "123"
+        };
+        const AUTH_SESSION_KEY = "lh_auth_user";
+
+        // ============================================================
+        // LIGHT / DARK MODE CONTROLLER MODULE
+        // ============================================================
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            }
+            updateThemeToggleButton();
+        }
+
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+                localStorage.setItem('theme', 'dark');
+            }
+            updateThemeToggleButton();
+        }
+
+        function updateThemeToggleButton() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            if (isDark) {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            } else {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            }
+        }
+
+        // ============================================================
+        // SIDEBAR COLLAPSE CONTROLLER MODULE [1]
+        // ============================================================
+        function setupSidebarCollapsing() {
+            const sidebar = document.getElementById('sidebar');
+            const collapseBtn = document.getElementById('sidebarCollapseBtn');
+            const savedState = localStorage.getItem('sidebar_collapsed');
+
+            if (savedState === 'true') {
+                sidebar.classList.add('collapsed');
+                collapseBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>`;
+            }
+
+            collapseBtn.addEventListener('click', () => {
+                const isCollapsed = sidebar.classList.toggle('collapsed');
+                localStorage.setItem('sidebar_collapsed', isCollapsed);
+                if (isCollapsed) {
+                    collapseBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>`;
+                } else {
+                    collapseBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>`;
+                }
+            });
+        }
+
+        // ============================================================
+        // AUTH MODULE GATEWAY
+        // ============================================================
+        function checkAuthOnLoad() {
+            const savedUser = sessionStorage.getItem(AUTH_SESSION_KEY);
+            if (savedUser && Object.prototype.hasOwnProperty.call(AUTH_USERS, savedUser)) {
+                grantAccess(savedUser);
+            } else {
+                document.getElementById('loginOverlay').classList.remove('hidden');
+                document.getElementById('appShell').classList.add('hidden');
+                document.getElementById('loginUsername').focus();
+            }
+        }
+
+        function grantAccess(username) {
+            sessionStorage.setItem(AUTH_SESSION_KEY, username);
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('appShell').classList.remove('hidden');
+            document.getElementById('currentUserLabel').textContent = username;
+            if (!appInitialized) {
+                initApp();
+                appInitialized = true;
+            }
+        }
+
+        function setupAuthListeners() {
+            document.getElementById('loginForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const user = document.getElementById('loginUsername').value.trim();
+                const pass = document.getElementById('loginPassword').value;
+                const errEl = document.getElementById('loginError');
+
+                if (Object.prototype.hasOwnProperty.call(AUTH_USERS, user) && AUTH_USERS[user] === pass) {
+                    errEl.textContent = '';
+                    document.getElementById('loginForm').reset();
+                    grantAccess(user);
+                } else {
+                    errEl.textContent = '⚠️ Invalid username or password.';
+                }
+            });
+
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                sessionStorage.removeItem(AUTH_SESSION_KEY);
+                location.reload();
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            setupSidebarCollapsing();
+            setupAuthListeners();
+            checkAuthOnLoad();
+        });
+
+        // Initialize Application Modules
+        async function initApp() {
+            setCurrentTimestamp();
+            setupTabs();
+            setupEventListeners();
+            setupAutocompleteFields();
+            setupDBManagementTabs();
+            setupLedgerActions();
+            setupEditModal();
+            setupBulkStatusModal();
+            setupReportView();
+
+            await populateLookupData();
+            await refreshAllLocalLedgerTables();
+        }
+
+        // ============================================================
+        // TAB FLOW CONTROLLER NAVIGATION [1]
+        // ============================================================
+        function setupTabs() {
+            const tabsMap = {
+                'tabBtnReservation': { id: 'tabReservationView', title: 'Registration Entry', desc: 'FEFO Monitoring & Recording Workspace' },
+                'tabBtnAllReservations': { id: 'tabAllReservationsView', title: 'All Reservation Logs', desc: 'Comprehensive Transactional Ledger Stream' },
+                'tabBtnReport': { id: 'tabReportView', title: 'Operational Analytics Report', desc: 'System Performance, Gaps & FEFO Alerts' },
+                'tabBtnMasterDB': { id: 'tabMasterDBView', title: 'Materials Master Registry', desc: 'Inventory Material SKU Mapping Index' },
+                'tabBtnCustomerDB': { id: 'tabCustomerDBView', title: 'Customer Account Index', desc: 'Logistics Partner & Client Account Matrix' }
+            };
+
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetInfo = tabsMap[btn.id];
+                    if (!targetInfo) return;
+
+                    // Reset Navigation Styling
+                    tabButtons.forEach(b => {
+                        b.classList.remove('bg-blue-600', 'text-white');
+                        b.classList.add('hover:bg-slate-800', 'text-slate-400', 'hover:text-white');
+                    });
+                    tabContents.forEach(c => c.classList.add('hidden'));
+
+                    // Set Active Highlight
+                    btn.classList.remove('hover:bg-slate-800', 'text-slate-400', 'hover:text-white');
+                    btn.classList.add('bg-blue-600', 'text-white');
+                    document.getElementById(targetInfo.id).classList.remove('hidden');
+
+                    // Header labels updates
+                    document.getElementById('headerTabTitle').textContent = targetInfo.title;
+                    document.getElementById('headerTabDesc').textContent = targetInfo.desc;
+
+                    // Sub-routines triggers
+                    if (targetInfo.id === 'tabAllReservationsView') {
+                        loadAllReservationsLedger();
+                    } else if (targetInfo.id === 'tabReportView') {
+                        loadReportsCoreData();
+                    }
+                });
+            });
+
+            // Bind global Light/Dark toggle button
+            document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+        }
+
+        function setCurrentTimestamp() {
+            const now = new Date();
+            document.getElementById('dateOfEntry').value = now.toLocaleString();
+        }
+
+        // ============================================================
+        // MASTER DATA INGEST PIPELINES
+        // ============================================================
+        async function populateLookupData() {
+            try {
+                let customerData = [];
+                let cStart = 0, cLimit = 1000, cHasMore = true;
+                while (cHasMore) {
+                    const { data, error } = await _supabase.from('customers_db').select('customer_name').order('customer_name', { ascending: true }).range(cStart, cStart + cLimit - 1);
+                    if (error) throw error;
+                    customerData = customerData.concat(data);
+                    if (data.length < cLimit) cHasMore = false; else cStart += cLimit;
+                }
+                allCustomers = customerData;
+
+                let materialData = [];
+                let mStart = 0, mLimit = 1000, mHasMore = true;
+                while (mHasMore) {
+                    const { data, error } = await _supabase.from('materials_db').select('material_code, material_description').order('material_code', { ascending: true }).range(mStart, mStart + mLimit - 1);
+                    if (error) throw error;
+                    materialData = materialData.concat(data);
+                    if (data.length < mLimit) mHasMore = false; else mStart += mLimit;
+                }
+                allMaterials = materialData;
+                
+                globalMaterialsMap = {};
+                materialData.forEach(m => { globalMaterialsMap[m.material_code] = m.material_description; });
+
+                populateLedgerFilterDropdowns();
+            } catch (err) {
+                console.error("[Database Connection Exception]", err);
+            }
+        }
+
+        function populateLedgerFilterDropdowns() {
+            const customerSelect = document.getElementById('ledgerFilterCustomer');
+            const materialSelect = document.getElementById('ledgerFilterMaterial');
+            if (!customerSelect || !materialSelect) return;
+
+            const prevCustomerVal = customerSelect.value;
+            const prevMaterialVal = materialSelect.value;
+
+            customerSelect.innerHTML = '<option value="">All Customers</option>' +
+                allCustomers.map(c => `<option value="${escapeHtml(c.customer_name)}">${escapeHtml(c.customer_name)}</option>`).join('');
+
+            materialSelect.innerHTML = '<option value="">All Materials</option>' +
+                allMaterials.map(m => `<option value="${escapeHtml(m.material_code)}">${escapeHtml(m.material_code)} — ${escapeHtml(m.material_description || '')}</option>`).join('');
+
+            if ([...customerSelect.options].some(o => o.value === prevCustomerVal)) customerSelect.value = prevCustomerVal;
+            if ([...materialSelect.options].some(o => o.value === prevMaterialVal)) materialSelect.value = prevMaterialVal;
+        }
+
+        async function refreshAllLocalLedgerTables() {
+            renderMaterialsMasterTable();
+            renderCustomersMasterTable();
+        }
+
+        // ============================================================
+        // FIELD AUTOCOMPLETE MODULE
+        // ============================================================
+        function setupAutocompleteFields() {
+            setupAutocomplete({
+                inputId: 'customerName',
+                boxId: 'customerSuggestions',
+                hintId: 'customerHint',
+                getData: () => allCustomers,
+                getLabel: c => c.customer_name,
+                getValue: c => c.customer_name,
+                onSelect: () => { evalFEFOEngine(); },
+                onChange: () => { evalFEFOEngine(); validateCustomerHint(); }
+            });
+
+            setupAutocomplete({
+                inputId: 'materialCode',
+                boxId: 'materialSuggestions',
+                hintId: 'materialHint',
+                getData: () => allMaterials,
+                getLabel: m => m.material_code,
+                getValue: m => m.material_code,
+                onSelect: (m) => {
+                    document.getElementById('materialDesc').value = m ? m.material_description : '';
+                    evalFEFOEngine();
+                },
+                onChange: () => {
+                    const code = document.getElementById('materialCode').value.trim();
+                    document.getElementById('materialDesc').value = globalMaterialsMap[code] || '';
+                    evalFEFOEngine();
+                    validateMaterialHint();
+                }
+            });
+        }
+
+        function setupAutocomplete({ inputId, boxId, hintId, getData, getLabel, getValue, onSelect, onChange }) {
+            const input = document.getElementById(inputId);
+            const box = document.getElementById(boxId);
+
+            function renderSuggestions() {
+                const query = input.value.trim().toLowerCase();
+                box.innerHTML = '';
+                if (!query) {
+                    box.classList.add('hidden');
+                    return;
+                }
+                const data = getData();
+                const matches = data.filter(item => getLabel(item).toLowerCase().includes(query)).slice(0, 8);
+
+                if (matches.length === 0) {
+                    box.innerHTML = `<div class="px-3 py-2 text-xs text-slate-400 italic">No matches found</div>`;
+                    box.classList.remove('hidden');
+                    return;
+                }
+
+                matches.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-50 dark:border-slate-800 last:border-0 text-slate-800 dark:text-slate-200 font-medium";
+                    row.textContent = getLabel(item);
+                    row.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        input.value = getValue(item);
+                        box.classList.add('hidden');
+                        if (hintId) document.getElementById(hintId).textContent = '';
+                        onSelect(item);
+                    });
+                    box.appendChild(row);
+                });
+                box.classList.remove('hidden');
+            }
+
+            input.addEventListener('input', () => { renderSuggestions(); onChange(); });
+            input.addEventListener('focus', () => { if (input.value.trim()) renderSuggestions(); });
+            input.addEventListener('blur', () => { setTimeout(() => box.classList.add('hidden'), 150); });
+        }
+
+        function validateCustomerHint() {
+            const val = document.getElementById('customerName').value.trim();
+            const hint = document.getElementById('customerHint');
+            if (!val) { hint.textContent = ''; return; }
+            const exists = allCustomers.some(c => c.customer_name === val);
+            hint.textContent = exists ? '' : '⚠️ No match in customer database';
+            hint.className = "text-[10px] mt-1 h-4 text-amber-600 dark:text-amber-400 font-semibold";
+        }
+
+        function validateMaterialHint() {
+            const val = document.getElementById('materialCode').value.trim();
+            const hint = document.getElementById('materialHint');
+            if (!val) { hint.textContent = ''; return; }
+            const exists = Object.prototype.hasOwnProperty.call(globalMaterialsMap, val);
+            hint.textContent = exists ? '' : '⚠️ No match in material database';
+            hint.className = "text-[10px] mt-1 h-4 text-amber-600 dark:text-amber-400 font-semibold";
+        }
+
+        function setupEventListeners() {
+            document.getElementById('salesOrder').addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                const hint = document.getElementById('salesOrderHint');
+                hint.textContent = (val && !/^\d{10}$/.test(val)) ? '⚠️ Must be exactly 10 digits' : '';
+                hint.className = "text-[10px] mt-1 h-4 text-amber-600 dark:text-amber-400 font-semibold";
+            });
+
+            document.getElementById('picklist').addEventListener('input', debounce(async (e) => {
+                const val = e.target.value.trim();
+                const statusInput = document.getElementById('status');
+
+                if (/^\d{10}$/.test(val)) {
+                    const { data, error } = await _supabase
+                        .from('reservations')
+                        .select('status')
+                        .eq('picklist', val)
+                        .order('date_of_entry', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    if (data && data.status) {
+                        statusInput.value = data.status.toUpperCase();
+                    } else {
+                        statusInput.value = "UNDELIVERED";
+                    }
+                } else {
+                    statusInput.value = "UNDELIVERED";
+                }
+            }, 350));
+
+            document.getElementById('batchCode').addEventListener('input', (e) => {
+                const calculatedDate = parseBatchExpirationDate(e.target.value.trim());
+                document.getElementById('expirationDate').value = calculatedDate;
+            });
+
+            document.getElementById('reservationForm').addEventListener('submit', handleFormSubmission);
+        }
+
+        function parseBatchExpirationDate(batchCode) {
+            if (!batchCode) return "";
+            const prefix2 = batchCode.substring(0, 2).toUpperCase();
+            const prefix1 = batchCode.substring(0, 1).toUpperCase();
+            const standardPrefixes = ["BB", "LK", "LC", "TR", "DD", "IN"];
+
+            try {
+                if (standardPrefixes.includes(prefix2)) {
+                    let mmStr = batchCode.substring(2, 4), ddStr = batchCode.substring(4, 6), yyStr = batchCode.substring(6, 8);
+                    if (mmStr.length === 2 && ddStr.length === 2 && yyStr.length === 2) {
+                        return formatUIOutputDate(new Date(parseInt(yyStr) + 2000, parseInt(mmStr) - 1, parseInt(ddStr)));
+                    }
+                }
+                if (["U", "C", "B", "E"].includes(prefix1)) {
+                    let ddStr = batchCode.substring(1, 3), mmText = batchCode.substring(3, 6).toUpperCase(), yyStr = batchCode.substring(6, 8);
+                    const lookupMonths = {"JAN":0,"FEB":1,"MAR":2,"APR":3,"MAY":4,"JUN":5,"JUL":6,"AUG":7,"SEP":8,"OCT":9,"NOV":10,"DEC":11};
+                    if (ddStr.length === 2 && mmText.length === 3 && yyStr.length === 2 && lookupMonths[mmText] !== undefined) {
+                        return formatUIOutputDate(new Date(parseInt(yyStr) + 2000, lookupMonths[mmText], parseInt(ddStr)));
+                    }
+                }
+            } catch (e) { console.error(e); }
+            return "";
+        }
+
+        function formatUIOutputDate(dateObj) {
+            if (isNaN(dateObj.getTime())) return "";
+            const monthsText = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            return `${monthsText[dateObj.getMonth()]}-${String(dateObj.getDate()).padStart(2, '0')}-${dateObj.getFullYear()}`;
+        }
+
+        // ============================================================
+        // LIVE FEFO INSIGHTS ENGINE
+        // ============================================================
+        async function evalFEFOEngine() {
+            const material = document.getElementById('materialCode').value.trim();
+            const customer = document.getElementById('customerName').value.trim();
+            const containerBody = document.getElementById('fefoInsightsMainBody');
+            const filterMetaBox = document.getElementById('fefoTargetMetaData');
+
+            if (!material || !customer) {
+                filterMetaBox.classList.add('hidden');
+                containerBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-500 italic bg-slate-950/10">
+                            Select a Customer Name AND a Material Code inside the entry fields to evaluate matched inventory...
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            filterMetaBox.classList.remove('hidden');
+            document.getElementById('fefoFilterItem').textContent = `Cust: ${customer} | SKU: ${material}`;
+
+            const { data: records, error } = await _supabase
+                .from('reservations')
+                .select('sales_order, required_delivery_date, customer_name, batch_code, qty, status, expiration_date')
+                .eq('material_code', material)
+                .eq('customer_name', customer);
+
+            if (error) {
+                containerBody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-red-400 font-mono">Error: ${error.message}</td></tr>`;
+                return;
+            }
+
+            containerBody.innerHTML = "";
+            if (!records || records.length === 0) {
+                containerBody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 italic bg-slate-950/10">No allocations resolved for this specific partnership.</td></tr>`;
+                return;
+            }
+
+            const deliveredRecords = records.filter(r => (r.status || '').toUpperCase() === 'DELIVERED');
+            const undeliveredRecords = records.filter(r => (r.status || '').toUpperCase() !== 'DELIVERED');
+
+            function appendRecordRow(r) {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 border-b border-slate-800/60 transition duration-100";
+                const isDelivered = (r.status || '').toUpperCase() === 'DELIVERED';
+                const statusBadge = isDelivered 
+                    ? `<span class="bg-emerald-950 text-emerald-400 font-bold border border-emerald-800 text-[8px] px-1.5 py-0.5 rounded">DEL</span>`
+                    : `<span class="bg-amber-950 text-amber-400 font-bold border border-amber-800 text-[8px] px-1.5 py-0.5 rounded">UNDEL</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-2.5 font-mono text-slate-300">${r.sales_order || '--'}</td>
+                    <td class="py-2.5 text-slate-400 whitespace-nowrap">${r.required_delivery_date || '--'}</td>
+                    <td class="py-2.5 font-medium max-w-[120px] truncate text-slate-300" title="${r.customer_name}">${r.customer_name || '--'}</td>
+                    <td class="py-2.5 font-mono text-blue-300 font-semibold" title="Expires: ${r.expiration_date}">${r.batch_code || '--'}</td>
+                    <td class="py-2.5 text-right font-bold text-slate-100">${r.qty ? parseFloat(r.qty).toLocaleString() : '0'}</td>
+                    <td class="py-2.5 text-center">${statusBadge}</td>
+                `;
+                containerBody.appendChild(tr);
+            }
+
+            // Segment Heading 1
+            const delHeaderRow = document.createElement('tr');
+            delHeaderRow.className = "bg-slate-950/80 border-b border-slate-800";
+            delHeaderRow.innerHTML = `<td colspan="6" class="py-2 px-2 text-[9px] uppercase font-mono font-bold text-emerald-400 tracking-wider">⏱️ Latest Delivered Batch</td>`;
+            containerBody.appendChild(delHeaderRow);
+
+            if (deliveredRecords.length > 0) {
+                deliveredRecords.sort((a, b) => new Date(b.expiration_date) - new Date(a.expiration_date));
+                appendRecordRow(deliveredRecords[0]);
+            } else {
+                const emptyDelRow = document.createElement('tr');
+                emptyDelRow.className = "border-b border-slate-800/40";
+                emptyDelRow.innerHTML = `<td colspan="6" class="py-3 text-center text-slate-500 italic text-[10px] bg-slate-950/5">No active delivered records found.</td>`;
+                containerBody.appendChild(emptyDelRow);
+            }
+
+            // Segment Heading 2
+            const undelHeaderRow = document.createElement('tr');
+            undelHeaderRow.className = "bg-slate-950/80 border-b border-slate-800";
+            undelHeaderRow.innerHTML = `<td colspan="6" class="py-2 px-2 text-[9px] uppercase font-mono font-bold text-amber-400 tracking-wider">📦 Undelivered Allocation Queue</td>`;
+            containerBody.appendChild(undelHeaderRow);
+
+            if (undeliveredRecords.length > 0) {
+                undeliveredRecords.sort((a, b) => new Date(a.expiration_date) - new Date(b.expiration_date));
+                undeliveredRecords.forEach(r => appendRecordRow(r));
+            } else {
+                const emptyUndelRow = document.createElement('tr');
+                emptyUndelRow.className = "border-b border-slate-800/40";
+                emptyUndelRow.innerHTML = `<td colspan="6" class="py-3 text-center text-slate-500 italic text-[10px] bg-slate-950/5">No remaining undelivered allocations.</td>`;
+                containerBody.appendChild(emptyUndelRow);
+            }
+        }
+
+        // Handle Reservation Creation Form Submit
+        async function handleFormSubmission(e) {
+            e.preventDefault();
+            
+            const salesOrder = document.getElementById('salesOrder').value.trim();
+            const picklist = document.getElementById('picklist').value.trim();
+            const reqDeliveryDate = document.getElementById('reqDeliveryDate').value;
+            const customerName = document.getElementById('customerName').value.trim();
+            const materialCode = document.getElementById('materialCode').value.trim();
+            const materialDescription = document.getElementById('materialDesc').value.trim();
+            const qtyStr = document.getElementById('qty').value;
+            const batchCode = document.getElementById('batchCode').value.trim();
+            const expirationDate = document.getElementById('expirationDate').value;
+            const whseOrder = document.getElementById('whseOrder').value.trim();
+            const currentStatus = document.getElementById('status').value.toUpperCase();
+
+            if (!salesOrder || !picklist || !reqDeliveryDate || !customerName || !materialCode || !qtyStr || !batchCode || !whseOrder) {
+                alert("⚠️ Validation Notice:\nPlease fill in all required fields.");
+                return;
+            }
+
+            if (!/^\d{10}$/.test(salesOrder) || !/^\d{10}$/.test(picklist)) {
+                alert("⚠️ Format Error:\nSales Order and Picklist must be exactly 10 digits.");
+                return;
+            }
+
+            if (!expirationDate) {
+                alert("⚠️ Conversion Error:\nCheck batch format prefixes.");
+                return;
+            }
+
+            const customerValid = allCustomers.some(c => c.customer_name === customerName);
+            const materialValid = Object.prototype.hasOwnProperty.call(globalMaterialsMap, materialCode);
+
+            if (!customerValid || !materialValid) {
+                alert("⚠️ Reference Validation Fail:\nCustomer and Material values must match registry options exactly.");
+                return;
+            }
+
+            let parts = expirationDate.split('-');
+            const monthsMap = {"JAN":"01","FEB":"02","MAR":"03","APR":"04","MAY":"05","JUN":"06","JUL":"07","AUG":"08","SEP":"09","OCT":"10","NOV":"11","DEC":"12"};
+            let formattedExpirySQL = `${parts[2]}-${monthsMap[parts[0]]}-${parts[1]}`;
+
+            const payload = {
+                sales_order: salesOrder,
+                picklist: picklist,
+                required_delivery_date: reqDeliveryDate,
+                customer_name: customerName,
+                material_code: materialCode,
+                material_description: materialDescription,
+                qty: parseFloat(qtyStr),
+                batch_code: batchCode,
+                expiration_date: formattedExpirySQL,
+                whse_order: whseOrder,
+                status: currentStatus
+            };
+
+            const { error } = await _supabase.from('reservations').insert(payload);
+
+            if (error) {
+                alert(`❌ Insertion Error:\n${error.message}`);
+            } else {
+                alert("Reservation successfully logged into structural databases.");
+                document.getElementById('reservationForm').reset();
+                setCurrentTimestamp();
+                document.getElementById('status').value = "UNDELIVERED";
+                evalFEFOEngine();
+            }
+        }
+
+        // ============================================================
+        // MASTER SKUs (MATERIALS DB) TAB OPERATIONS
+        // ============================================================
+        function setupDBManagementTabs() {
+            document.getElementById('masterDBForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const code = document.getElementById('mdbCode').value.trim();
+                const desc = document.getElementById('mdbDesc').value.trim();
+
+                if (!code || !desc) { alert("Complete all master code inputs."); return; }
+
+                const { data, error } = await _supabase
+                    .from('materials_db')
+                    .upsert({ material_code: code, material_description: desc }, { onConflict: 'material_code' })
+                    .select();
+
+                if (error) {
+                    alert(`Registry Update Error: ${error.message}`);
+                } else {
+                    alert("Materials SKU updated successfully.");
+                    document.getElementById('masterDBForm').reset();
+                    await populateLookupData();
+                    renderMaterialsMasterTable();
+                }
+            });
+
+            document.getElementById('customerDBForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('cdbName').value.trim();
+
+                if (!name) { alert("Specify customer registry values."); return; }
+
+                const { data, error } = await _supabase.from('customers_db').insert({ customer_name: name }).select();
+
+                if (error) {
+                    alert(`Registry Update Error: ${error.message}`);
+                } else {
+                    alert("Customer Account successfully registered.");
+                    document.getElementById('customerDBForm').reset();
+                    await populateLookupData();
+                    renderCustomersMasterTable();
+                }
+            });
+
+            setupMaterialsTableActions();
+            setupCustomersTableActions();
+        }
+
+        function renderMaterialsMasterTable() {
+            const body = document.getElementById('mdbTableBody');
+            body.innerHTML = "";
+            if (allMaterials.length === 0) {
+                body.innerHTML = `<tr><td colspan="3" class="px-4 py-4 text-center text-slate-400 italic">No inventory material rows found inside reference memory maps.</td></tr>`;
+                return;
+            }
+            allMaterials.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800 text-xs border-b border-slate-100 dark:border-slate-800 transition duration-150";
+                tr.dataset.code = m.material_code;
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-mono font-bold text-slate-700 dark:text-slate-300 mdb-code-cell">${escapeHtml(m.material_code)}</td>
+                    <td class="px-4 py-2 text-slate-600 dark:text-slate-400 mdb-desc-cell">${escapeHtml(m.material_description)}</td>
+                    <td class="px-4 py-2 text-center whitespace-nowrap">
+                        <button class="mdb-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-code="${escapeHtml(m.material_code)}">✏️ Edit</button>
+                        <button class="mdb-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-code="${escapeHtml(m.material_code)}">🗑️ Delete</button>
+                    </td>`;
+                body.appendChild(tr);
+            });
+        }
+
+        function setupMaterialsTableActions() {
+            document.getElementById('mdbTableBody').addEventListener('click', async (e) => {
+                const editBtn = e.target.closest('.mdb-edit-btn');
+                const deleteBtn = e.target.closest('.mdb-delete-btn');
+                const saveBtn = e.target.closest('.mdb-save-btn');
+                const cancelBtn = e.target.closest('.mdb-cancel-btn');
+
+                if (editBtn) {
+                    const code = editBtn.dataset.code;
+                    const row = document.querySelector(`#mdbTableBody tr[data-code="${CSS.escape(code)}"]`);
+                    const material = allMaterials.find(m => m.material_code === code);
+                    if (!row || !material) return;
+                    row.querySelector('.mdb-desc-cell').innerHTML = `<input type="text" class="mdb-edit-desc-input w-full bg-white dark:bg-slate-700 border border-blue-400 rounded px-2 py-1 text-slate-900 dark:text-white" value="${escapeHtml(material.material_description)}">`;
+                    row.querySelector('td:last-child').innerHTML = `
+                        <button class="mdb-save-btn text-emerald-600 dark:text-emerald-400 hover:underline font-bold mr-3" data-code="${escapeHtml(code)}">💾 Save</button>
+                        <button class="mdb-cancel-btn text-slate-500 hover:underline font-bold" data-code="${escapeHtml(code)}">Cancel</button>`;
+                }
+
+                if (cancelBtn) {
+                    renderMaterialsMasterTable();
+                }
+
+                if (saveBtn) {
+                    const code = saveBtn.dataset.code;
+                    const row = document.querySelector(`#mdbTableBody tr[data-code="${CSS.escape(code)}"]`);
+                    const newDesc = row.querySelector('.mdb-edit-desc-input').value.trim();
+                    if (!newDesc) { alert("Description input is empty."); return; }
+
+                    const { data, error } = await _supabase.from('materials_db').update({ material_description: newDesc }).eq('material_code', code).select();
+
+                    if (error) {
+                        alert(`Update Failure: ${error.message}`);
+                    } else {
+                        await populateLookupData();
+                        renderMaterialsMasterTable();
+                    }
+                }
+
+                if (deleteBtn) {
+                    const code = deleteBtn.dataset.code;
+                    if (!confirm(`Delete material "${code}"? Action will fail if linked transactions exist.`)) return;
+
+                    const { error } = await _supabase.from('materials_db').delete().eq('material_code', code);
+                    if (error) {
+                        alert(`Delete Error: ${error.message}`);
+                    } else {
+                        await populateLookupData();
+                        renderMaterialsMasterTable();
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // CUSTOMER ACCOUNTS TAB OPERATIONS
+        // ============================================================
+        function renderCustomersMasterTable() {
+            const body = document.getElementById('cdbTableBody');
+            body.innerHTML = "";
+            if (allCustomers.length === 0) {
+                body.innerHTML = `<tr><td colspan="2" class="px-4 py-4 text-center text-slate-400 italic">No customer profiles resolved from the master.</td></tr>`;
+                return;
+            }
+            allCustomers.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800 text-xs border-b border-slate-100 dark:border-slate-800 transition duration-150";
+                tr.dataset.name = c.customer_name;
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 cdb-name-cell">${escapeHtml(c.customer_name)}</td>
+                    <td class="px-4 py-2 text-center whitespace-nowrap">
+                        <button class="cdb-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-name="${escapeHtml(c.customer_name)}">✏️ Edit</button>
+                        <button class="cdb-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-name="${escapeHtml(c.customer_name)}">🗑️ Delete</button>
+                    </td>`;
+                body.appendChild(tr);
+            });
+        }
+
+        function setupCustomersTableActions() {
+            document.getElementById('cdbTableBody').addEventListener('click', async (e) => {
+                const editBtn = e.target.closest('.cdb-edit-btn');
+                const deleteBtn = e.target.closest('.cdb-delete-btn');
+                const saveBtn = e.target.closest('.cdb-save-btn');
+                const cancelBtn = e.target.closest('.cdb-cancel-btn');
+
+                if (editBtn) {
+                    const name = editBtn.dataset.name;
+                    const row = document.querySelector(`#cdbTableBody tr[data-name="${CSS.escape(name)}"]`);
+                    if (!row) return;
+                    row.querySelector('.cdb-name-cell').innerHTML = `<input type="text" class="cdb-edit-name-input w-full bg-white dark:bg-slate-700 border border-blue-400 rounded px-2 py-1 text-slate-900 dark:text-white" value="${escapeHtml(name)}">`;
+                    row.querySelector('td:last-child').innerHTML = `
+                        <button class="cdb-save-btn text-emerald-600 dark:text-emerald-400 hover:underline font-bold mr-3" data-name="${escapeHtml(name)}">💾 Save</button>
+                        <button class="cdb-cancel-btn text-slate-500 hover:underline font-bold" data-name="${escapeHtml(name)}">Cancel</button>`;
+                }
+
+                if (cancelBtn) {
+                    renderCustomersMasterTable();
+                }
+
+                if (saveBtn) {
+                    const oldName = saveBtn.dataset.name;
+                    const row = document.querySelector(`#cdbTableBody tr[data-name="${CSS.escape(oldName)}"]`);
+                    const newName = row.querySelector('.cdb-edit-name-input').value.trim();
+                    if (!newName) { alert("Customer Name is empty."); return; }
+
+                    const { data, error } = await _supabase.from('customers_db').update({ customer_name: newName }).eq('customer_name', oldName).select();
+
+                    if (error) {
+                        alert(`Update Failure: ${error.message}`);
+                    } else {
+                        await populateLookupData();
+                        renderCustomersMasterTable();
+                    }
+                }
+
+                if (deleteBtn) {
+                    const name = deleteBtn.dataset.name;
+                    if (!confirm(`Delete customer "${name}"? Action will fail if linked transactions exist.`)) return;
+
+                    const { error } = await _supabase.from('customers_db').delete().eq('customer_name', name);
+                    if (error) {
+                        alert(`Delete Error: ${error.message}`);
+                    } else {
+                        await populateLookupData();
+                        renderCustomersMasterTable();
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // TRANSACTIONAL LOGS LEDGER VIEW
+        // ============================================================
+        async function loadAllReservationsLedger() {
+            const tbody = document.getElementById('ledgerTableBody');
+            const searchVal = document.getElementById('ledgerSearchInput').value.trim();
+            const customerVal = document.getElementById('ledgerFilterCustomer').value;
+            const materialVal = document.getElementById('ledgerFilterMaterial').value;
+            const statusVal = document.getElementById('ledgerFilterStatus').value;
+            tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-6 text-center text-slate-400 italic">Streaming live operational databases records...</td></tr>`;
+
+            let query = _supabase.from('reservations').select('*', { count: 'exact' });
+
+            if (searchVal) {
+                query = query.or(`sales_order.ilike.%${searchVal}%,picklist.ilike.%${searchVal}%,customer_name.ilike.%${searchVal}%`);
+            }
+            if (customerVal) {
+                query = query.eq('customer_name', customerVal);
+            }
+            if (materialVal) {
+                query = query.eq('material_code', materialVal);
+            }
+            if (statusVal) {
+                query = query.eq('status', statusVal);
+            }
+
+            const rangeStart = ledgerPage * ledgerPageSize;
+            const rangeEnd = rangeStart + ledgerPageSize - 1;
+
+            const { data, error, count } = await query.order('date_of_entry', { ascending: false }).range(rangeStart, rangeEnd);
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-4 text-center text-red-500 font-semibold">Log Query Intercept: ${error.message}</td></tr>`;
+                return;
+            }
+
+            currentLedgerData = data || [];
+            ledgerTotalCount = count || 0;
+
+            const totalPages = ledgerTotalCount === 0 ? 1 : Math.ceil(ledgerTotalCount / ledgerPageSize);
+            if (ledgerPage > 0 && ledgerPage >= totalPages) {
+                ledgerPage = totalPages - 1;
+                loadAllReservationsLedger();
+                return;
+            }
+
+            applyLedgerSort();
+            renderLedgerRows();
+            updateLedgerPaginationUI();
+        }
+
+        function updateLedgerPaginationUI() {
+            const infoEl = document.getElementById('ledgerPaginationInfo');
+            const pageIndicatorEl = document.getElementById('ledgerPageIndicator');
+            const prevBtn = document.getElementById('ledgerPrevBtn');
+            const nextBtn = document.getElementById('ledgerNextBtn');
+            if (!infoEl || !pageIndicatorEl || !prevBtn || !nextBtn) return;
+
+            const totalPages = ledgerTotalCount === 0 ? 1 : Math.ceil(ledgerTotalCount / ledgerPageSize);
+            const rangeStart = ledgerTotalCount === 0 ? 0 : (ledgerPage * ledgerPageSize) + 1;
+            const rangeEnd = Math.min((ledgerPage + 1) * ledgerPageSize, ledgerTotalCount);
+
+            infoEl.textContent = `Showing ${rangeStart}-${rangeEnd} of ${ledgerTotalCount} records`;
+            pageIndicatorEl.textContent = `Page ${ledgerPage + 1} of ${totalPages}`;
+
+            prevBtn.disabled = ledgerPage <= 0;
+            nextBtn.disabled = (ledgerPage + 1) >= totalPages;
+        }
+
+        // CSV String Escaper Utility
+        function csvEscapeField(value) {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            if (/[",\n\r]/.test(str)) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+        }
+
+        function downloadRecordsAsCSV(rows, filename) {
+            const headers = ['Entry Date', 'Sales Order', 'Picklist', 'RDD', 'Customer Name', 'Material Code', 'Material Description', 'Qty', 'Batch Code', 'Expiry Date', 'Whse Order', 'Status', 'Remarks'];
+            const lines = [headers.map(csvEscapeField).join(',')];
+
+            rows.forEach(item => {
+                const entryDate = item.date_of_entry ? new Date(item.date_of_entry).toLocaleString() : '';
+                const cells = [
+                    entryDate,
+                    item.sales_order,
+                    item.picklist,
+                    item.required_delivery_date,
+                    item.customer_name,
+                    item.material_code,
+                    item.material_description,
+                    item.qty,
+                    item.batch_code,
+                    item.expiration_date,
+                    item.whse_order,
+                    item.status,
+                    item.remarks
+                ].map(csvEscapeField);
+                lines.push(cells.join(','));
+            });
+
+            const csvContent = '\uFEFF' + lines.join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        async function exportRecordsByStatus(status, btnId) {
+            const btn = document.getElementById(btnId);
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.textContent = '⏳ Exporting...';
+
+            try {
+                let allRows = [];
+                let start = 0;
+                const pageSize = 1000;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const { data, error } = await _supabase
+                        .from('reservations')
+                        .select('*')
+                        .eq('status', status)
+                        .order('date_of_entry', { ascending: false })
+                        .range(start, start + pageSize - 1);
+
+                    if (error) throw error;
+                    allRows = allRows.concat(data || []);
+                    if (!data || data.length < pageSize) {
+                        hasMore = false;
+                    } else {
+                        start += pageSize;
+                    }
+                }
+
+                if (allRows.length === 0) {
+                    alert(`No records matched Status = ${status}.`);
+                    return;
+                }
+
+                const d = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                const ts = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+                downloadRecordsAsCSV(allRows, `${status.toLowerCase()}_records_${ts}.csv`);
+            } catch (err) {
+                alert(`Export Failure: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function applyLedgerSort() {
+            const key = ledgerSortKey;
+            const dir = ledgerSortDir === 'asc' ? 1 : -1;
+            const numericKeys = ['qty'];
+            const dateKeys = ['date_of_entry', 'required_delivery_date'];
+
+            currentLedgerData.sort((a, b) => {
+                let av = a[key], bv = b[key];
+
+                if (numericKeys.includes(key)) {
+                    av = parseFloat(av) || 0;
+                    bv = parseFloat(bv) || 0;
+                    return (av - bv) * dir;
+                }
+                if (dateKeys.includes(key)) {
+                    av = av ? new Date(av).getTime() : 0;
+                    bv = bv ? new Date(bv).getTime() : 0;
+                    return (av - bv) * dir;
+                }
+                if (key === 'expiration_date') {
+                    av = av ? new Date(av).getTime() : 0;
+                    bv = bv ? new Date(bv).getTime() : 0;
+                    if (isNaN(av)) av = 0;
+                    if (isNaN(bv)) bv = 0;
+                    return (av - bv) * dir;
+                }
+                av = (av || '').toString().toLowerCase();
+                bv = (bv || '').toString().toLowerCase();
+                if (av < bv) return -1 * dir;
+                if (av > bv) return 1 * dir;
+                return 0;
+            });
+
+            updateLedgerSortIndicators();
+        }
+
+        function updateLedgerSortIndicators() {
+            document.querySelectorAll('.ledger-sort-th').forEach(th => {
+                const indicator = th.querySelector('.sort-indicator');
+                if (!indicator) return;
+                if (th.dataset.sortKey === ledgerSortKey) {
+                    indicator.textContent = ledgerSortDir === 'asc' ? '▲' : '▼';
+                } else {
+                    indicator.textContent = '';
+                }
+            });
+        }
+
+        function renderLedgerRows() {
+            const tbody = document.getElementById('ledgerTableBody');
+            tbody.innerHTML = "";
+            if (currentLedgerData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-6 text-center text-slate-400 italic">No matching transactional history matches criteria indexes.</td></tr>`;
+                return;
+            }
+
+            currentLedgerData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 transition duration-150";
+                tr.dataset.id = item.id;
+
+                const dDate = item.date_of_entry ? new Date(item.date_of_entry).toLocaleDateString() : '--';
+                const isDel = (item.status || '').toUpperCase() === 'DELIVERED';
+
+                const statusBadge = isDel
+                    ? `<span class="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 font-bold text-[9px] px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">DELIVERED</span>`
+                    : `<span class="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-400 font-bold text-[9px] px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">UNDELIVERED</span>`;
+
+                const remarksPreview = item.remarks ? escapeHtml(item.remarks) : '<span class="text-slate-300 dark:text-slate-600 italic">—</span>';
+
+                tr.innerHTML = `
+                    <td class="px-3 py-3 text-slate-500 whitespace-nowrap">${dDate}</td>
+                    <td class="px-3 py-3 font-mono font-semibold text-slate-900 dark:text-white">${escapeHtml(item.sales_order)}</td>
+                    <td class="px-3 py-3 font-mono text-slate-600 dark:text-slate-400">${escapeHtml(item.picklist)}</td>
+                    <td class="px-3 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">${escapeHtml(item.required_delivery_date) || '--'}</td>
+                    <td class="px-3 py-3 font-medium text-slate-800 dark:text-slate-300 truncate max-w-[150px]" title="${escapeHtml(item.customer_name)}">${escapeHtml(item.customer_name)}</td>
+                    <td class="px-3 py-3 text-slate-600 dark:text-slate-400 max-w-[180px] truncate" title="${escapeHtml(item.material_code)} - ${escapeHtml(item.material_description)}">${escapeHtml(item.material_code)}</td>
+                    <td class="px-3 py-3 text-right font-bold text-slate-900 dark:text-white">${parseFloat(item.qty).toLocaleString()}</td>
+                    <td class="px-3 py-3 font-mono text-blue-600 dark:text-blue-400 font-bold">${escapeHtml(item.batch_code)}</td>
+                    <td class="px-3 py-3 text-amber-700 dark:text-amber-500 font-semibold whitespace-nowrap">${escapeHtml(item.expiration_date) || '--'}</td>
+                    <td class="px-3 py-3 text-slate-500 dark:text-slate-500 max-w-[120px] truncate" title="${escapeHtml(item.whse_order)}">${escapeHtml(item.whse_order)}</td>
+                    <td class="px-3 py-3 text-center">${statusBadge}</td>
+                    <td class="px-3 py-3 text-slate-500 dark:text-slate-400 max-w-[160px] truncate" title="${escapeHtml(item.remarks || '')}">${remarksPreview}</td>
+                    <td class="px-3 py-3 text-center whitespace-nowrap">
+                        <button class="ledger-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-id="${item.id}">✏️ Edit</button>
+                        <button class="ledger-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-id="${item.id}">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function deleteReservationRow(id) {
+            if (!confirm("Confirm removal of this transaction booking record? Action cannot be undone.")) return;
+            const { error } = await _supabase.from('reservations').delete().eq('id', id);
+            if (error) {
+                alert(`Delete Operation Failure: ${error.message}`);
+            } else {
+                loadAllReservationsLedger();
+            }
+        }
+
+        function setupLedgerActions() {
+            document.getElementById('ledgerTableBody').addEventListener('click', (e) => {
+                const editBtn = e.target.closest('.ledger-edit-btn');
+                const deleteBtn = e.target.closest('.ledger-delete-btn');
+
+                if (editBtn) {
+                    const item = currentLedgerData.find(r => r.id === parseInt(editBtn.dataset.id, 10));
+                    if (item) openEditModal(item);
+                }
+                if (deleteBtn) {
+                    deleteReservationRow(parseInt(deleteBtn.dataset.id, 10));
+                }
+            });
+
+            document.getElementById('refreshLedgerBtn').addEventListener('click', () => loadAllReservationsLedger());
+            document.getElementById('exportUndeliveredBtn').addEventListener('click', () => exportRecordsByStatus('UNDELIVERED', 'exportUndeliveredBtn'));
+            document.getElementById('exportDeliveredBtn').addEventListener('click', () => exportRecordsByStatus('DELIVERED', 'exportDeliveredBtn'));
+            document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => { ledgerPage = 0; loadAllReservationsLedger(); }, 300));
+
+            document.getElementById('ledgerFilterCustomer').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
+            document.getElementById('ledgerFilterMaterial').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
+            document.getElementById('ledgerFilterStatus').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
+
+            document.getElementById('ledgerPageSizeSelect').addEventListener('change', (e) => {
+                ledgerPageSize = parseInt(e.target.value, 10) || 100;
+                ledgerPage = 0;
+                loadAllReservationsLedger();
+            });
+
+            document.getElementById('ledgerClearFiltersBtn').addEventListener('click', () => {
+                document.getElementById('ledgerSearchInput').value = '';
+                document.getElementById('ledgerFilterCustomer').value = '';
+                document.getElementById('ledgerFilterMaterial').value = '';
+                document.getElementById('ledgerFilterStatus').value = '';
+                ledgerPage = 0;
+                loadAllReservationsLedger();
+            });
+
+            document.getElementById('ledgerPrevBtn').addEventListener('click', () => {
+                if (ledgerPage > 0) {
+                    ledgerPage--;
+                    loadAllReservationsLedger();
+                }
+            });
+
+            document.getElementById('ledgerNextBtn').addEventListener('click', () => {
+                const totalPages = ledgerTotalCount === 0 ? 1 : Math.ceil(ledgerTotalCount / ledgerPageSize);
+                if (ledgerPage + 1 < totalPages) {
+                    ledgerPage++;
+                    loadAllReservationsLedger();
+                }
+            });
+
+            document.querySelectorAll('.ledger-sort-th').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.dataset.sortKey;
+                    if (ledgerSortKey === key) {
+                        ledgerSortDir = ledgerSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        ledgerSortKey = key;
+                        ledgerSortDir = 'asc';
+                    }
+                    applyLedgerSort();
+                    renderLedgerRows();
+                });
+            });
+        }
+
+        // ============================================================
+        // OPERATIONS REPORT HUB ENGINE [NEW LOGIC MODULE] [2]
+        // ============================================================
+        function setupReportView() {
+            const tabFEFO = document.getElementById('reportSubTabFEFO');
+            const tabGaps = document.getElementById('reportSubTabGaps');
+            const secFEFO = document.getElementById('reportSectionFEFO');
+            const secGaps = document.getElementById('reportSectionGaps');
+
+            tabFEFO.addEventListener('click', () => {
+                tabFEFO.className = "px-4 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white shadow-sm transition";
+                tabGaps.className = "px-4 py-2 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition";
+                secFEFO.classList.remove('hidden');
+                secGaps.classList.add('hidden');
+            });
+
+            tabGaps.addEventListener('click', () => {
+                tabGaps.className = "px-4 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white shadow-sm transition";
+                tabFEFO.className = "px-4 py-2 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition";
+                secGaps.classList.remove('hidden');
+                secFEFO.classList.add('hidden');
+            });
+        }
+
+        async function loadReportsCoreData() {
+            const activeKpi = document.getElementById('reportKpiActive');
+            const completedKpi = document.getElementById('reportKpiCompleted');
+            const violationsKpi = document.getElementById('reportKpiViolations');
+            const avgAgeKpi = document.getElementById('reportKpiAvgAge');
+
+            activeKpi.textContent = "⏳ Calculating...";
+            completedKpi.textContent = "⏳ Calculating...";
+            violationsKpi.textContent = "⏳ Calculating...";
+            avgAgeKpi.textContent = "⏳ Calculating...";
+
+            try {
+                let allRecords = [];
+                let start = 0, limit = 1000, hasMore = true;
+                while (hasMore) {
+                    const { data, error } = await _supabase.from('reservations').select('*').order('date_of_entry', { ascending: false }).range(start, start + limit - 1);
+                    if (error) throw error;
+                    allRecords = allRecords.concat(data || []);
+                    if (!data || data.length < limit) hasMore = false; else start += limit;
+                }
+
+                // Split records by active/closed status
+                const activeOrders = allRecords.filter(r => (r.status || '').toUpperCase() !== 'DELIVERED');
+                const completedOrders = allRecords.filter(r => (r.status || '').toUpperCase() === 'DELIVERED');
+
+                // Compute KPI numbers
+                activeKpi.textContent = activeOrders.length.toLocaleString();
+                completedKpi.textContent = completedOrders.length.toLocaleString();
+
+                // Compute active aging date gaps [2]
+                let totalAgeDays = 0;
+                const today = new Date();
+                const agingRows = [];
+
+                activeOrders.forEach(item => {
+                    const recordedDate = item.date_of_entry ? new Date(item.date_of_entry) : null;
+                    let ageDays = 0;
+                    if (recordedDate) {
+                        const diffTime = Math.abs(today - recordedDate);
+                        ageDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        totalAgeDays += ageDays;
+                    }
+                    agingRows.push({ item, ageDays });
+                });
+
+                const avgAge = activeOrders.length > 0 ? Math.round(totalAgeDays / activeOrders.length) : 0;
+                avgAgeKpi.textContent = `${avgAge} Days`;
+
+                // Run structural FEFO sequencing violations algorithm [2]
+                const fefoViolations = evaluateDatabaseFEFOViolations(allRecords);
+                violationsKpi.textContent = fefoViolations.length.toLocaleString();
+
+                // Render Summary Table Modules
+                renderFEFOViolationsTable(fefoViolations);
+                renderAgingGapsTable(agingRows);
+
+            } catch (err) {
+                console.error("[Reports Computation Ingest Error]", err);
+            }
+        }
+
+        // Logical sequencing core rules evaluator [2]
+        function evaluateDatabaseFEFOViolations(records) {
+            const violations = [];
+            const groups = {};
+
+            // Group transactions by Material Code
+            records.forEach(r => {
+                if (!r.material_code) return;
+                if (!groups[r.material_code]) groups[r.material_code] = [];
+                groups[r.material_code].push(r);
+            });
+
+            for (const matCode in groups) {
+                const groupRecords = groups[matCode];
+                
+                // Sort chronologically by planned fulfillment execution sequence (Required Delivery Date)
+                groupRecords.sort((a, b) => {
+                    const da = new Date(a.required_delivery_date || a.date_of_entry || 0).getTime();
+                    const db = new Date(b.required_delivery_date || b.date_of_entry || 0).getTime();
+                    return da - db;
+                });
+
+                // Evaluate downstream sequences for violations [2]
+                for (let i = 0; i < groupRecords.length; i++) {
+                    const currentRec = groupRecords[i];
+                    const currentExpiry = parseAnyDate(currentRec.expiration_date);
+                    if (!currentExpiry) continue;
+
+                    for (let j = i + 1; j < groupRecords.length; j++) {
+                        const laterRec = groupRecords[j];
+                        const laterExpiry = parseAnyDate(laterRec.expiration_date);
+                        if (!laterExpiry) continue;
+
+                        // FEFO Infraction condition check [2]
+                        if (currentExpiry > laterExpiry && currentRec.batch_code !== laterRec.batch_code) {
+                            violations.push({
+                                material_code: matCode,
+                                desc: currentRec.material_description || '',
+                                violator: currentRec,
+                                bypassed: laterRec
+                            });
+                            break; 
+                        }
+                    }
+                }
+            }
+            return violations;
+        }
+
+        function renderFEFOViolationsTable(violations) {
+            const tbody = document.getElementById('fefoViolationsTableBody');
+            tbody.innerHTML = "";
+
+            if (violations.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No active sequencing infractions captured. Operational standards verified.</td></tr>`;
+                return;
+            }
+
+            violations.forEach(v => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800 text-xs border-b border-slate-100 dark:border-slate-800/60 transition";
+                tr.innerHTML = `
+                    <td class="px-3 py-3">
+                        <span class="font-mono font-bold text-slate-800 dark:text-slate-200 block">${escapeHtml(v.material_code)}</span>
+                        <span class="text-slate-400 dark:text-slate-500 text-[10px] block truncate max-w-[180px]" title="${escapeHtml(v.desc)}">${escapeHtml(v.desc)}</span>
+                    </td>
+                    <td class="px-3 py-3">
+                        <div class="bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 p-2 rounded-lg">
+                            <span class="text-slate-800 dark:text-slate-200 font-semibold block text-[10px]">SO: ${escapeHtml(v.violator.sales_order)} | PK: ${escapeHtml(v.violator.picklist)}</span>
+                            <span class="text-red-600 dark:text-red-400 font-bold block text-[10px] mt-0.5">Exp: ${escapeHtml(v.violator.expiration_date)} (Batch: ${escapeHtml(v.violator.batch_code)})</span>
+                            <span class="text-slate-400 dark:text-slate-500 text-[9px] block">Planned Delivery: ${escapeHtml(v.violator.required_delivery_date)}</span>
+                            <span class="text-slate-400 dark:text-slate-500 text-[9px] block">Customer: ${escapeHtml(v.violator.customer_name)}</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-3">
+                        <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 p-2 rounded-lg">
+                            <span class="text-slate-800 dark:text-slate-200 font-semibold block text-[10px]">SO: ${escapeHtml(v.bypassed.sales_order)} | PK: ${escapeHtml(v.bypassed.picklist)}</span>
+                            <span class="text-amber-600 dark:text-amber-500 font-bold block text-[10px] mt-0.5">Exp: ${escapeHtml(v.bypassed.expiration_date)} (Batch: ${escapeHtml(v.bypassed.batch_code)})</span>
+                            <span class="text-slate-400 dark:text-slate-500 text-[9px] block">Planned Delivery: ${escapeHtml(v.bypassed.required_delivery_date)}</span>
+                            <span class="text-slate-400 dark:text-slate-500 text-[9px] block">Customer: ${escapeHtml(v.bypassed.customer_name)}</span>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderAgingGapsTable(rows) {
+            const tbody = document.getElementById('agingGapsTableBody');
+            tbody.innerHTML = "";
+
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No open bookings tracking aging data.</td></tr>`;
+                return;
+            }
+
+            // Sort open orders by highest aging days first
+            rows.sort((a, b) => b.ageDays - a.ageDays);
+
+            rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800 text-xs border-b border-slate-100 dark:border-slate-800 transition duration-150";
+                
+                let ageBadgeClass = "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800";
+                if (r.ageDays >= 7) {
+                    ageBadgeClass = "bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-400 border-red-200 dark:border-red-900/50";
+                } else if (r.ageDays >= 3) {
+                    ageBadgeClass = "bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-900/50";
+                }
+
+                tr.innerHTML = `
+                    <td class="px-3 py-3 font-mono font-bold text-slate-800 dark:text-slate-200">${escapeHtml(r.item.sales_order)}</td>
+                    <td class="px-3 py-3 font-mono text-slate-600 dark:text-slate-400">${escapeHtml(r.item.picklist)}</td>
+                    <td class="px-3 py-3 font-medium text-slate-800 dark:text-slate-300 truncate max-w-[150px]">${escapeHtml(r.item.customer_name)}</td>
+                    <td class="px-3 py-3 text-slate-600 dark:text-slate-400 truncate max-w-[180px]">${escapeHtml(r.item.material_code)} — ${escapeHtml(r.item.material_description)}</td>
+                    <td class="px-3 py-3 text-slate-500 dark:text-slate-500">${r.item.date_of_entry ? new Date(r.item.date_of_entry).toLocaleDateString() : '--'}</td>
+                    <td class="px-3 py-3 text-right">
+                        <span class="inline-block border text-[10px] px-2 py-0.5 rounded-full font-bold ${ageBadgeClass}">${r.ageDays} Days Old</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ============================================================
+        // PASTED BULK EXCEL CONTROLLER
+        // ============================================================
+        function splitBulkStatusLine(line) {
+            let cols = line.split('\t');
+            if (cols.length < 2) cols = line.split(/\s{2,}/);
+            if (cols.length < 2) cols = line.split(',');
+            return cols.map(c => c.trim()).filter(c => c !== '');
+        }
+
+        function classifyBulkStatusRow(cols) {
+            let statusTok = null;
+            let picklistTok = null;
+            for (const c of cols) {
+                const upper = c.toUpperCase();
+                if (['DELIVERED', 'UNDELIVERED', 'NULL'].includes(upper)) {
+                    statusTok = upper;
+                } else if (!picklistTok) {
+                    picklistTok = c;
+                }
+            }
+            return { statusTok, picklistTok };
+        }
+
+        function parseBulkStatusPaste(text) {
+            const lines = text.split(/\r?\n/);
+            const entries = new Map();
+            const skipped = [];
+
+            lines.forEach(rawLine => {
+                const line = rawLine.trim();
+                if (!line) return;
+
+                const cols = splitBulkStatusLine(line);
+                if (cols.length < 2) {
+                    skipped.push({ line: rawLine, reason: 'Unable to resolve structured column limits' });
+                    return;
+                }
+
+                const lc = cols.map(c => c.toLowerCase());
+                if (lc.includes('status') && lc.includes('picklist')) return;
+
+                const { statusTok, picklistTok } = classifyBulkStatusRow(cols);
+
+                if (!statusTok) {
+                    skipped.push({ line: rawLine, reason: 'Invalid or empty status token detected' });
+                    return;
+                }
+                if (!picklistTok) {
+                    skipped.push({ line: rawLine, reason: 'Missing picklist index mapping number' });
+                    return;
+                }
+
+                const cleanPicklist = picklistTok.replace(/,/g, '').replace(/\.0+$/, '');
+                const dbStatus = statusTok === 'NULL' ? null : statusTok;
+
+                entries.set(cleanPicklist, dbStatus);
+            });
+
+            return { entries, skipped };
+        }
+
+        function renderBulkStatusPreview(entries, skipped) {
+            const wrap = document.getElementById('bulkStatusPreviewWrap');
+            const countEl = document.getElementById('bulkStatusPreviewCount');
+            const listEl = document.getElementById('bulkStatusPreview');
+            wrap.classList.remove('hidden');
+            countEl.textContent = `(${entries.size} picklist(s) parsed)`;
+
+            let rowsHtml = '';
+            entries.forEach((status, picklist) => {
+                const statusLabel = status === null ? 'NULL (clear)' : status;
+                const badgeClass = status === 'DELIVERED'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                    : status === 'UNDELIVERED'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+                rowsHtml += `
+                    <div class="flex items-center justify-between px-3 py-1.5">
+                        <span class="font-mono text-slate-700 dark:text-slate-300">${escapeHtml(picklist)}</span>
+                        <span class="font-bold text-[9px] px-2 py-0.5 rounded-full border ${badgeClass}">${escapeHtml(statusLabel)}</span>
+                    </div>`;
+            });
+
+            skipped.forEach(s => {
+                rowsHtml += `
+                    <div class="px-3 py-1.5 bg-red-50 dark:bg-red-950/20 text-xs">
+                        <span class="text-red-600 dark:text-red-400 font-bold">⚠ Skipped:</span>
+                        <span class="font-mono text-slate-500 dark:text-slate-400"> "${escapeHtml(s.line)}"</span>
+                        <span class="text-slate-400 dark:text-slate-500"> — ${escapeHtml(s.reason)}</span>
+                    </div>`;
+            });
+
+            listEl.innerHTML = rowsHtml || `<div class="px-3 py-3 text-slate-400 italic">Empty queue data.</div>`;
+        }
+
+        async function runBulkStatusUpdate(entries) {
+            const results = { updated: [], notFound: [], errors: [] };
+            const list = Array.from(entries.entries()); 
+            const chunkSize = 10;
+
+            for (let i = 0; i < list.length; i += chunkSize) {
+                const chunk = list.slice(i, i + chunkSize);
+                await Promise.all(chunk.map(async ([picklist, status]) => {
+                    try {
+                        const { data, error } = await _supabase
+                            .from('reservations')
+                            .update({ status: status })
+                            .eq('picklist', picklist)
+                            .select('id');
+
+                        if (error) {
+                            results.errors.push({ picklist, message: error.message });
+                        } else if (!data || data.length === 0) {
+                            results.notFound.push(picklist);
+                        } else {
+                            results.updated.push({ picklist, count: data.length, status });
+                        }
+                    } catch (err) {
+                        results.errors.push({ picklist, message: err.message || String(err) });
+                    }
+                }));
+            }
+
+            return results;
+        }
+
+        function renderBulkStatusResult(results) {
+            const box = document.getElementById('bulkStatusResult');
+            box.classList.remove('hidden');
+
+            const totalRecordsUpdated = results.updated.reduce((sum, u) => sum + u.count, 0);
+
+            let html = `<p class="font-bold text-emerald-700 dark:text-emerald-400 mb-1">✅ Successfully updated ${results.updated.length} picklist(s) — ${totalRecordsUpdated} transaction rows updated.</p>`;
+
+            if (results.notFound.length > 0) {
+                html += `<p class="font-bold text-amber-700 dark:text-amber-400 mt-2 mb-1">⚠ ${results.notFound.length} picklist index mappings not found:</p>
+                    <p class="font-mono text-slate-500 dark:text-slate-400 break-all">${results.notFound.map(escapeHtml).join(', ')}</p>`;
+            }
+
+            if (results.errors.length > 0) {
+                html += `<p class="font-bold text-red-700 dark:text-red-400 mt-2 mb-1">✖ ${results.errors.length} updates encountered errors:</p>
+                    <ul class="list-disc list-inside text-slate-500 dark:text-slate-400">
+                        ${results.errors.map(e => `<li><span class="font-mono">${escapeHtml(e.picklist)}</span> — ${escapeHtml(e.message)}</li>`).join('')}
+                    </ul>`;
+            }
+
+            box.className = `text-xs border rounded-lg p-3 ${results.errors.length > 0 ? 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20' : 'border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/20'}`;
+            box.innerHTML = html;
+        }
+
+        function openBulkStatusModal() {
+            document.getElementById('bulkStatusTextarea').value = '';
+            document.getElementById('bulkStatusPreviewWrap').classList.add('hidden');
+            document.getElementById('bulkStatusResult').classList.add('hidden');
+            document.getElementById('bulkStatusApplyBtn').disabled = true;
+            bulkStatusParsedEntries = null;
+            document.getElementById('bulkStatusModal').classList.remove('hidden');
+            document.getElementById('bulkStatusModal').classList.add('flex');
+        }
+
+        function closeBulkStatusModal() {
+            document.getElementById('bulkStatusModal').classList.add('hidden');
+            document.getElementById('bulkStatusModal').classList.remove('flex');
+        }
+
+        function setupBulkStatusModal() {
+            document.getElementById('openBulkStatusModalBtn').addEventListener('click', openBulkStatusModal);
+            document.getElementById('bulkStatusCloseBtn').addEventListener('click', closeBulkStatusModal);
+
+            document.getElementById('bulkStatusParseBtn').addEventListener('click', () => {
+                const text = document.getElementById('bulkStatusTextarea').value;
+                const { entries, skipped } = parseBulkStatusPaste(text);
+                bulkStatusParsedEntries = entries;
+                document.getElementById('bulkStatusResult').classList.add('hidden');
+                renderBulkStatusPreview(entries, skipped);
+                document.getElementById('bulkStatusApplyBtn').disabled = entries.size === 0;
+            });
+
+            document.getElementById('bulkStatusApplyBtn').addEventListener('click', async () => {
+                if (!bulkStatusParsedEntries || bulkStatusParsedEntries.size === 0) return;
+
+                const count = bulkStatusParsedEntries.size;
+                if (!confirm(`Apply structural status corrections over ${count} picklist records? Action cannot be reverted.`)) return;
+
+                const applyBtn = document.getElementById('bulkStatusApplyBtn');
+                applyBtn.disabled = true;
+                applyBtn.textContent = '⏳ Applying...';
+
+                const results = await runBulkStatusUpdate(bulkStatusParsedEntries);
+                renderBulkStatusResult(results);
+
+                applyBtn.textContent = '✅ Apply Updates';
+                applyBtn.disabled = true; 
+
+                ledgerPage = 0;
+                loadAllReservationsLedger();
+            });
+        }
+
+        // ============================================================
+        // RECORD EDIT MODAL CONTROLLER
+        // ============================================================
+        function openEditModal(item) {
+            document.getElementById('editRecordId').value = item.id;
+            document.getElementById('editSalesOrder').value = item.sales_order || '';
+            document.getElementById('editPicklist').value = item.picklist || '';
+            document.getElementById('editRDD').value = item.required_delivery_date || '';
+            document.getElementById('editCustomerName').value = item.customer_name || '';
+            document.getElementById('editMaterialCode').value = item.material_code || '';
+            document.getElementById('editMaterialDesc').value = item.material_description || '';
+            document.getElementById('editQty').value = item.qty || '';
+            document.getElementById('editBatchCode').value = item.batch_code || '';
+            document.getElementById('editExpirationDate').value = item.expiration_date || '';
+            document.getElementById('editWhseOrder').value = item.whse_order || '';
+            document.getElementById('editStatus').value = (item.status || 'UNDELIVERED').toUpperCase();
+            document.getElementById('editRemarks').value = item.remarks || '';
+
+            const modal = document.getElementById('editReservationModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editReservationModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function setupEditModal() {
+            document.getElementById('editModalCloseBtn').addEventListener('click', closeEditModal);
+            document.getElementById('editModalCancelBtn').addEventListener('click', closeEditModal);
+
+            document.getElementById('editAppendNoteBtn').addEventListener('click', () => {
+                const ta = document.getElementById('editRemarks');
+                const stamp = new Date().toLocaleString();
+                const currentUser = sessionStorage.getItem(AUTH_SESSION_KEY) || 'user';
+                const prefix = ta.value.trim() ? '\n' : '';
+                ta.value += `${prefix}[${stamp} — ${currentUser}] `;
+                ta.focus();
+                ta.selectionStart = ta.selectionEnd = ta.value.length;
+            });
+
+            document.getElementById('editModalSaveBtn').addEventListener('click', async () => {
+                const id = parseInt(document.getElementById('editRecordId').value, 10);
+                const salesOrder = document.getElementById('editSalesOrder').value.trim();
+                const picklist = document.getElementById('editPicklist').value.trim();
+
+                if (!/^\d{10}$/.test(salesOrder) || !/^\d{10}$/.test(picklist)) {
+                    alert("⚠️ Format Pattern Infraction:\nSales Order and Picklist indexes must be exactly 10 digits.");
+                    return;
+                }
+
+                const payload = {
+                    sales_order: salesOrder,
+                    picklist: picklist,
+                    required_delivery_date: document.getElementById('editRDD').value,
+                    customer_name: document.getElementById('editCustomerName').value.trim(),
+                    material_code: document.getElementById('editMaterialCode').value.trim(),
+                    material_description: document.getElementById('editMaterialDesc').value.trim(),
+                    qty: parseFloat(document.getElementById('editQty').value) || 0,
+                    batch_code: document.getElementById('editBatchCode').value.trim(),
+                    expiration_date: document.getElementById('editExpirationDate').value.trim(),
+                    whse_order: document.getElementById('editWhseOrder').value.trim(),
+                    status: document.getElementById('editStatus').value,
+                    remarks: document.getElementById('editRemarks').value
+                };
+
+                const { error } = await _supabase.from('reservations').update(payload).eq('id', id);
+                if (error) {
+                    alert(`❌ Save Error: ${error.message}`);
+                    return;
+                }
+
+                if (payload.material_code) {
+                    const { error: mdbError } = await _supabase
+                        .from('materials_db')
+                        .upsert(
+                            { material_code: payload.material_code, material_description: payload.material_description },
+                            { onConflict: 'material_code' }
+                        );
+                    if (mdbError) {
+                        console.error("[Master SKU Sync failure]", mdbError);
+                    } else {
+                        globalMaterialsMap[payload.material_code] = payload.material_description;
+                        const existingIdx = allMaterials.findIndex(m => m.material_code === payload.material_code);
+                        if (existingIdx >= 0) {
+                            allMaterials[existingIdx].material_description = payload.material_description;
+                        } else {
+                            allMaterials.push({ material_code: payload.material_code, material_description: payload.material_description });
+                        }
+                        renderMaterialsMasterTable();
+                    }
+                }
+
+                closeEditModal();
+                loadAllReservationsLedger();
+            });
+
+            document.getElementById('editModalDeleteBtn').addEventListener('click', async () => {
+                const id = parseInt(document.getElementById('editRecordId').value, 10);
+                if (!confirm("Confirm removal of this transaction booking record? Action cannot be reverted.")) return;
+
+                const { error } = await _supabase.from('reservations').delete().eq('id', id);
+                if (error) {
+                    alert(`Delete Error: ${error.message}`);
+                    return;
+                }
+                closeEditModal();
+                loadAllReservationsLedger();
+            });
+        }
+    </script>
+</body>
+</html>

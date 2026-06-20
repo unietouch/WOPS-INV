@@ -308,6 +308,9 @@
                     <button id="openBulkStatusModalBtn" class="border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-2 rounded-lg transition">
                         📋 Bulk Paste Update
                     </button>
+                    <button id="exportUndeliveredBtn" class="border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-2 rounded-lg transition">
+                        ⬇️ Export Undelivered
+                    </button>
                     <button id="refreshLedgerBtn" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm md:ml-auto">
                         🔄 Refresh Data
                     </button>
@@ -1325,6 +1328,114 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
             nextBtn.disabled = (ledgerPage + 1) >= totalPages;
         }
 
+        // ============================================================
+        // EXPORT UNDELIVERED — pulls EVERY reservation record currently
+        // marked UNDELIVERED (not just the visible page) straight from
+        // the database and downloads it as a CSV file.
+        // ============================================================
+
+        // Escapes a single value for safe inclusion in a CSV cell
+        // (wraps in quotes and doubles any internal quotes whenever the
+        // value contains a comma, quote, or line break).
+        function csvEscapeField(value) {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            if (/[",\n\r]/.test(str)) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+        }
+
+        // Builds a CSV string from reservation rows and triggers a browser download.
+        function downloadRecordsAsCSV(rows, filename) {
+            const headers = ['Entry Date', 'Sales Order', 'Picklist', 'RDD', 'Customer Name', 'Material Code', 'Material Description', 'Qty', 'Batch Code', 'Expiry Date', 'Whse Order', 'Status', 'Remarks'];
+            const lines = [headers.map(csvEscapeField).join(',')];
+
+            rows.forEach(item => {
+                const entryDate = item.date_of_entry ? new Date(item.date_of_entry).toLocaleString() : '';
+                const cells = [
+                    entryDate,
+                    item.sales_order,
+                    item.picklist,
+                    item.required_delivery_date,
+                    item.customer_name,
+                    item.material_code,
+                    item.material_description,
+                    item.qty,
+                    item.batch_code,
+                    item.expiration_date,
+                    item.whse_order,
+                    item.status,
+                    item.remarks
+                ].map(csvEscapeField);
+                lines.push(cells.join(','));
+            });
+
+            // Prefix with a UTF-8 BOM so Excel renders special characters correctly
+            const csvContent = '\uFEFF' + lines.join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function buildExportTimestamp(date) {
+            const pad = n => String(n).padStart(2, '0');
+            return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
+        }
+
+        // Fetches every UNDELIVERED reservation record (paged through in
+        // batches of 1000 to get around Supabase's per-request row cap)
+        // and exports them all to CSV, regardless of the ledger's current
+        // filters, search term, or page.
+        async function exportUndeliveredRecords() {
+            const btn = document.getElementById('exportUndeliveredBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.textContent = '⏳ Exporting...';
+
+            try {
+                let allRows = [];
+                let start = 0;
+                const pageSize = 1000;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const { data, error } = await _supabase
+                        .from('reservations')
+                        .select('*')
+                        .eq('status', 'UNDELIVERED')
+                        .order('date_of_entry', { ascending: false })
+                        .range(start, start + pageSize - 1);
+
+                    if (error) throw error;
+                    allRows = allRows.concat(data || []);
+                    if (!data || data.length < pageSize) {
+                        hasMore = false;
+                    } else {
+                        start += pageSize;
+                    }
+                }
+
+                if (allRows.length === 0) {
+                    alert('No UNDELIVERED records found to export.');
+                    return;
+                }
+
+                downloadRecordsAsCSV(allRows, `undelivered_reservations_${buildExportTimestamp(new Date())}.csv`);
+            } catch (err) {
+                alert(`Export failed: ${err.message || err}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
         // Sorts currentLedgerData in place according to ledgerSortKey/ledgerSortDir.
         // Numeric columns sort numerically, dates sort chronologically, everything
         // else falls back to a case-insensitive string comparison.
@@ -1468,6 +1579,7 @@ UNDELIVERED	6051538424" class="w-full border border-slate-300 rounded-lg px-3 py
             });
 
             document.getElementById('refreshLedgerBtn').addEventListener('click', () => loadAllReservationsLedger());
+            document.getElementById('exportUndeliveredBtn').addEventListener('click', () => exportUndeliveredRecords());
             document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => { ledgerPage = 0; loadAllReservationsLedger(); }, 300));
 
             // Filter dropdowns — any change resets to page 1 and refetches

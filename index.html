@@ -439,25 +439,126 @@
 
                     <!-- 3A: FEFO Violations Summary Panel -->
                     <div id="reportSectionFEFO" class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                        <div class="mb-4">
-                            <h3 class="text-base font-bold text-slate-900 dark:text-white">FEFO Sequencing Alerts</h3>
-                            <p class="text-xs text-slate-400 dark:text-slate-500">Highlighted entries where newer inventory items were dispatched ahead of older batches of the same material [2].</p>
+                        <div class="flex flex-col md:flex-row md:items-start justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900 dark:text-white">FEFO Sequencing Alerts</h3>
+                                <p class="text-xs text-slate-400 dark:text-slate-500">Detailed log of instances where a later-expiring batch was served ahead of an earlier-expiring batch of the same material [2].</p>
+                                <p class="text-[10px] text-slate-400 dark:text-slate-500 italic mt-1">Note: entries where the served batch's Required Delivery Date falls on the same calendar day as its recorded entry date are excluded (treated as same-day/rush movements, not planning violations).</p>
+                            </div>
+                            <div class="flex gap-2 shrink-0">
+                                <button id="fefoManageReasonsBtn" class="hidden border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-3 py-2 rounded-lg transition whitespace-nowrap">
+                                    ⚙️ Manage Reasons
+                                </button>
+                                <button id="fefoExportBtn" class="border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold px-3 py-2 rounded-lg transition whitespace-nowrap">
+                                    ⬇ Export CSV
+                                </button>
+                            </div>
                         </div>
+
+                        <!-- FEFO Violations Filter Bar -->
+                        <div class="flex flex-wrap items-end gap-2.5 mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">SKU / Material</label>
+                                <select id="fefoFilterMaterial" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Materials</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Customer</label>
+                                <select id="fefoFilterCustomer" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-40 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Customers</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Date Mode</label>
+                                <select id="fefoFilterDateMode" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-32 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="all">All Dates</option>
+                                    <option value="range">Date Range</option>
+                                    <option value="month">Month</option>
+                                    <option value="quarter">Quarter</option>
+                                </select>
+                            </div>
+                            <div id="fefoDateRangeWrap" class="hidden flex-col md:flex-row gap-2">
+                                <div class="flex flex-col">
+                                    <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">From</label>
+                                    <input type="date" id="fefoFilterDateFrom" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="flex flex-col">
+                                    <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">To</label>
+                                    <input type="date" id="fefoFilterDateTo" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            <div id="fefoMonthWrap" class="hidden flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Month</label>
+                                <input type="month" id="fefoFilterMonth" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div id="fefoQuarterWrap" class="hidden flex-row gap-2">
+                                <div class="flex flex-col">
+                                    <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Year</label>
+                                    <select id="fefoFilterYear" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-24 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                                </div>
+                                <div class="flex flex-col">
+                                    <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Quarter</label>
+                                    <select id="fefoFilterQuarter" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-28 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="1">Q1 (Jan–Mar)</option>
+                                        <option value="2">Q2 (Apr–Jun)</option>
+                                        <option value="3">Q3 (Jul–Sep)</option>
+                                        <option value="4">Q4 (Oct–Dec)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex flex-col">
+                                <button id="fefoFilterResetBtn" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-3 py-2 rounded-lg transition">
+                                    ✕ Reset Filters
+                                </button>
+                            </div>
+                            <div class="flex flex-col ml-auto">
+                                <span id="fefoFilterResultCount" class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-1 py-2">0 records</span>
+                            </div>
+                        </div>
+
                         <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
                             <table class="w-full text-left text-xs border-collapse">
                                 <thead>
                                     <tr class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px] border-b border-slate-200 dark:border-slate-700">
-                                        <th class="px-3 py-3">Material Group</th>
-                                        <th class="px-3 py-3 text-red-600 dark:text-red-400 font-bold">Newer Issued First (Violation Instance)</th>
-                                        <th class="px-3 py-3 text-amber-600 dark:text-amber-500 font-bold">Older Left Behind (Bypassed Instance)</th>
+                                        <th class="px-3 py-3">Material</th>
+                                        <th class="px-3 py-3">Description</th>
+                                        <th class="px-3 py-3">Customer</th>
+                                        <th class="px-3 py-3">SO</th>
+                                        <th class="px-3 py-3">RDD</th>
+                                        <th class="px-3 py-3 text-red-600 dark:text-red-400 font-bold">Batch Served (Exp.)</th>
+                                        <th class="px-3 py-3 text-amber-600 dark:text-amber-500 font-bold">Batch Violated / Bypassed (Exp.)</th>
+                                        <th class="px-3 py-3 text-center">Gap (Days)</th>
+                                        <th class="px-3 py-3 min-w-[220px]">Remarks / Reason</th>
                                     </tr>
                                 </thead>
                                 <tbody id="fefoViolationsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                                     <tr>
-                                        <td colspan="3" class="px-3 py-8 text-center text-slate-400 italic">No violations detected in records database.</td>
+                                        <td colspan="9" class="px-3 py-8 text-center text-slate-400 italic">No violations detected in records database.</td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- FEFO Reason Management Modal [Admin Only] -->
+                    <div id="fefoReasonsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-md">
+                            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                                <h3 class="text-sm font-bold text-slate-900 dark:text-white">⚙️ Manage FEFO Violation Reasons</h3>
+                                <button id="fefoReasonsModalCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
+                            </div>
+                            <div class="p-5 space-y-4">
+                                <p class="text-[11px] text-slate-400 dark:text-slate-500">These reasons appear as quick-select options when annotating a FEFO violation (e.g. "Approved by Account"). Admin-managed list.</p>
+                                <div class="flex gap-2">
+                                    <input type="text" id="fefoNewReasonInput" placeholder="Add new reason..." class="flex-1 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <button id="fefoAddReasonBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition">Add</button>
+                                </div>
+                                <ul id="fefoReasonsList" class="divide-y divide-slate-100 dark:divide-slate-800 max-h-64 overflow-y-auto border border-slate-100 dark:border-slate-800 rounded-lg"></ul>
+                            </div>
+                            <div class="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                                <button id="fefoReasonsModalDoneBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg transition">Done</button>
+                            </div>
                         </div>
                     </div>
 
@@ -699,6 +800,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         let ledgerTotalCount = 0;      
         let bulkStatusParsedEntries = null;   
         let appInitialized = false;   
+        let allFefoViolations = [];
+        const FEFO_REASONS_KEY = "lh_fefo_reasons_v1";
 
         // Safe HTML String Escaper
         function escapeHtml(str) {
@@ -880,6 +983,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             setupEditModal();
             setupBulkStatusModal();
             setupReportView();
+            setupFefoFilters();
+            setupFefoReasonManagerUI();
 
             await populateLookupData();
             await refreshAllLocalLedgerTables();
@@ -1928,14 +2033,24 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 // Run structural FEFO sequencing violations algorithm [2]
                 const fefoViolations = evaluateDatabaseFEFOViolations(allRecords);
                 violationsKpi.textContent = fefoViolations.length.toLocaleString();
+                allFefoViolations = fefoViolations;
 
                 // Render Summary Table Modules
-                renderFEFOViolationsTable(fefoViolations);
+                populateFefoFilterDropdowns();
+                applyFefoFilters();
                 renderAgingGapsTable(agingRows);
 
             } catch (err) {
                 console.error("[Reports Computation Ingest Error]", err);
             }
+        }
+
+        // Returns true if two Date objects fall on the same calendar day
+        function sameCalendarDay(d1, d2) {
+            if (!d1 || !d2) return false;
+            return d1.getFullYear() === d2.getFullYear() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getDate() === d2.getDate();
         }
 
         // Logical sequencing core rules evaluator [2]
@@ -1966,6 +2081,13 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     const currentExpiry = parseAnyDate(currentRec.expiration_date);
                     if (!currentExpiry) continue;
 
+                    // Exclusion rule: skip if this served batch's Required Delivery Date
+                    // is the same calendar day as its recorded entry date (same-day/rush movement,
+                    // not a genuine planning-sequence violation).
+                    const currentRDD = currentRec.required_delivery_date ? new Date(currentRec.required_delivery_date) : null;
+                    const currentEntry = currentRec.date_of_entry ? new Date(currentRec.date_of_entry) : null;
+                    if (currentRDD && currentEntry && sameCalendarDay(currentRDD, currentEntry)) continue;
+
                     for (let j = i + 1; j < groupRecords.length; j++) {
                         const laterRec = groupRecords[j];
                         const laterExpiry = parseAnyDate(laterRec.expiration_date);
@@ -1973,11 +2095,14 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
                         // FEFO Infraction condition check [2]
                         if (currentExpiry > laterExpiry && currentRec.batch_code !== laterRec.batch_code) {
+                            const gapDays = Math.round((currentExpiry - laterExpiry) / (1000 * 60 * 60 * 24));
                             violations.push({
+                                id: `${currentRec.id || matCode + '_' + i}_${laterRec.id || j}`,
                                 material_code: matCode,
                                 desc: currentRec.material_description || '',
                                 violator: currentRec,
-                                bypassed: laterRec
+                                bypassed: laterRec,
+                                gapDays: gapDays
                             });
                             break; 
                         }
@@ -1991,37 +2116,400 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             const tbody = document.getElementById('fefoViolationsTableBody');
             tbody.innerHTML = "";
 
+            const countEl = document.getElementById('fefoFilterResultCount');
+            if (countEl) countEl.textContent = `${violations.length.toLocaleString()} record${violations.length === 1 ? '' : 's'}`;
+
             if (violations.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No active sequencing infractions captured. Operational standards verified.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No sequencing infractions match the current filters.</td></tr>`;
                 return;
             }
 
+            const reasons = loadFefoReasons();
+            const reasonOptionsHtml = '<option value="">— Select reason —</option>' +
+                reasons.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('') +
+                '<option value="__custom__">Custom / Free text...</option>';
+
             violations.forEach(v => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800 text-xs border-b border-slate-100 dark:border-slate-800/60 transition";
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800 text-xs border-b border-slate-100 dark:border-slate-800/60 transition align-top";
+                const existingRemark = v.violator.remarks || '';
                 tr.innerHTML = `
-                    <td class="px-3 py-3">
-                        <span class="font-mono font-bold text-slate-800 dark:text-slate-200 block">${escapeHtml(v.material_code)}</span>
-                        <span class="text-slate-400 dark:text-slate-500 text-[10px] block truncate max-w-[180px]" title="${escapeHtml(v.desc)}">${escapeHtml(v.desc)}</span>
-                    </td>
+                    <td class="px-3 py-3 font-mono font-bold text-slate-800 dark:text-slate-200">${escapeHtml(v.material_code)}</td>
+                    <td class="px-3 py-3 text-slate-500 dark:text-slate-400 max-w-[200px] truncate" title="${escapeHtml(v.desc)}">${escapeHtml(v.desc)}</td>
+                    <td class="px-3 py-3 text-slate-700 dark:text-slate-300 max-w-[160px] truncate" title="${escapeHtml(v.violator.customer_name)}">${escapeHtml(v.violator.customer_name)}</td>
+                    <td class="px-3 py-3 font-mono text-slate-600 dark:text-slate-400">${escapeHtml(v.violator.sales_order)}</td>
+                    <td class="px-3 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">${escapeHtml(v.violator.required_delivery_date)}</td>
                     <td class="px-3 py-3">
                         <div class="bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 p-2 rounded-lg">
-                            <span class="text-slate-800 dark:text-slate-200 font-semibold block text-[10px]">SO: ${escapeHtml(v.violator.sales_order)} | PK: ${escapeHtml(v.violator.picklist)}</span>
-                            <span class="text-red-600 dark:text-red-400 font-bold block text-[10px] mt-0.5">Exp: ${escapeHtml(v.violator.expiration_date)} (Batch: ${escapeHtml(v.violator.batch_code)})</span>
-                            <span class="text-slate-400 dark:text-slate-500 text-[9px] block">Planned Delivery: ${escapeHtml(v.violator.required_delivery_date)}</span>
-                            <span class="text-slate-400 dark:text-slate-500 text-[9px] block">Customer: ${escapeHtml(v.violator.customer_name)}</span>
+                            <span class="text-slate-800 dark:text-slate-200 font-semibold block text-[10px]">Batch: ${escapeHtml(v.violator.batch_code)}</span>
+                            <span class="text-red-600 dark:text-red-400 font-bold block text-[10px] mt-0.5">Exp: ${escapeHtml(v.violator.expiration_date)}</span>
                         </div>
                     </td>
                     <td class="px-3 py-3">
                         <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 p-2 rounded-lg">
-                            <span class="text-slate-800 dark:text-slate-200 font-semibold block text-[10px]">SO: ${escapeHtml(v.bypassed.sales_order)} | PK: ${escapeHtml(v.bypassed.picklist)}</span>
-                            <span class="text-amber-600 dark:text-amber-500 font-bold block text-[10px] mt-0.5">Exp: ${escapeHtml(v.bypassed.expiration_date)} (Batch: ${escapeHtml(v.bypassed.batch_code)})</span>
-                            <span class="text-slate-400 dark:text-slate-500 text-[9px] block">Planned Delivery: ${escapeHtml(v.bypassed.required_delivery_date)}</span>
-                            <span class="text-slate-400 dark:text-slate-500 text-[9px] block">Customer: ${escapeHtml(v.bypassed.customer_name)}</span>
+                            <span class="text-slate-800 dark:text-slate-200 font-semibold block text-[10px]">Batch: ${escapeHtml(v.bypassed.batch_code)}</span>
+                            <span class="text-amber-600 dark:text-amber-500 font-bold block text-[10px] mt-0.5">Exp: ${escapeHtml(v.bypassed.expiration_date)}</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-3 text-center">
+                        <span class="inline-block bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-2 py-1 rounded-md text-[10px]">${v.gapDays} d</span>
+                    </td>
+                    <td class="px-3 py-3">
+                        <div class="flex flex-col gap-1.5">
+                            ${existingRemark ? `<div class="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-md px-2 py-1 whitespace-pre-wrap">${escapeHtml(existingRemark)}</div>` : ''}
+                            <select data-role="fefoReasonSelect" data-rec-id="${escapeHtml(String(v.violator.id))}" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[10px] rounded-md px-2 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                ${reasonOptionsHtml}
+                            </select>
+                            <textarea data-role="fefoCustomReason" data-rec-id="${escapeHtml(String(v.violator.id))}" class="hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[10px] rounded-md px-2 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2" placeholder="Enter custom remark..."></textarea>
+                            <button data-role="fefoSaveRemark" data-rec-id="${escapeHtml(String(v.violator.id))}" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-2 py-1.5 rounded-md transition self-start">💾 Save</button>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
+            });
+
+            // Bind reason select -> toggle custom textarea
+            tbody.querySelectorAll('[data-role="fefoReasonSelect"]').forEach(sel => {
+                sel.addEventListener('change', () => {
+                    const recId = sel.getAttribute('data-rec-id');
+                    const ta = tbody.querySelector(`[data-role="fefoCustomReason"][data-rec-id="${CSS.escape(recId)}"]`);
+                    if (!ta) return;
+                    if (sel.value === '__custom__') {
+                        ta.classList.remove('hidden');
+                        ta.focus();
+                    } else {
+                        ta.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Bind Save buttons
+            tbody.querySelectorAll('[data-role="fefoSaveRemark"]').forEach(btn => {
+                btn.addEventListener('click', () => handleSaveFefoRemark(btn));
+            });
+        }
+
+        async function handleSaveFefoRemark(btn) {
+            const recId = btn.getAttribute('data-rec-id');
+            const tbody = document.getElementById('fefoViolationsTableBody');
+            const sel = tbody.querySelector(`[data-role="fefoReasonSelect"][data-rec-id="${CSS.escape(recId)}"]`);
+            const ta = tbody.querySelector(`[data-role="fefoCustomReason"][data-rec-id="${CSS.escape(recId)}"]`);
+
+            let reasonText = sel ? sel.value : '';
+            if (reasonText === '__custom__') {
+                reasonText = ta ? ta.value.trim() : '';
+            }
+            if (!reasonText) {
+                alert("⚠️ Please select or enter a reason before saving.");
+                return;
+            }
+
+            const numericId = parseInt(recId, 10);
+            if (isNaN(numericId)) {
+                alert("⚠️ Unable to resolve the underlying record for this violation.");
+                return;
+            }
+
+            const stamp = new Date().toLocaleString();
+            const currentUser = sessionStorage.getItem(AUTH_SESSION_KEY) || 'user';
+            const note = `[${stamp} — ${currentUser} — FEFO Reason: ${reasonText}]`;
+
+            const originalLabel = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Saving...';
+
+            try {
+                // Fetch existing remarks first so we append rather than overwrite
+                const { data: existingRows, error: fetchErr } = await _supabase
+                    .from('reservations')
+                    .select('remarks')
+                    .eq('id', numericId)
+                    .limit(1);
+                if (fetchErr) throw fetchErr;
+
+                const priorRemarks = (existingRows && existingRows[0] && existingRows[0].remarks) || '';
+                const combinedRemarks = priorRemarks.trim() ? `${priorRemarks}\n${note}` : note;
+
+                const { error } = await _supabase.from('reservations').update({ remarks: combinedRemarks }).eq('id', numericId);
+                if (error) throw error;
+
+                // Update in-memory record so re-filtering reflects saved remark without a full reload
+                allFefoViolations.forEach(v => {
+                    if (v.violator.id === numericId) v.violator.remarks = combinedRemarks;
+                    if (v.bypassed.id === numericId) v.bypassed.remarks = combinedRemarks;
+                });
+
+                applyFefoFilters();
+            } catch (err) {
+                alert(`❌ Failed to save remark: ${err.message}`);
+                btn.disabled = false;
+                btn.textContent = originalLabel;
+            }
+        }
+
+        // ============================================================
+        // FEFO VIOLATIONS FILTER ENGINE
+        // ============================================================
+        function populateFefoFilterDropdowns() {
+            const materialSelect = document.getElementById('fefoFilterMaterial');
+            const customerSelect = document.getElementById('fefoFilterCustomer');
+            const yearSelect = document.getElementById('fefoFilterYear');
+            if (!materialSelect || !customerSelect) return;
+
+            const prevMaterial = materialSelect.value;
+            const prevCustomer = customerSelect.value;
+
+            materialSelect.innerHTML = '<option value="">All Materials</option>' +
+                allMaterials.map(m => `<option value="${escapeHtml(m.material_code)}">${escapeHtml(m.material_code)} — ${escapeHtml(m.material_description || '')}</option>`).join('');
+            customerSelect.innerHTML = '<option value="">All Customers</option>' +
+                allCustomers.map(c => `<option value="${escapeHtml(c.customer_name)}">${escapeHtml(c.customer_name)}</option>`).join('');
+
+            if ([...materialSelect.options].some(o => o.value === prevMaterial)) materialSelect.value = prevMaterial;
+            if ([...customerSelect.options].some(o => o.value === prevCustomer)) customerSelect.value = prevCustomer;
+
+            // Populate year dropdown based on years present in violations' RDD values
+            if (yearSelect) {
+                const prevYear = yearSelect.value;
+                const years = new Set();
+                allFefoViolations.forEach(v => {
+                    const d = v.violator.required_delivery_date ? new Date(v.violator.required_delivery_date) : null;
+                    if (d && !isNaN(d)) years.add(d.getFullYear());
+                });
+                const currentYear = new Date().getFullYear();
+                years.add(currentYear);
+                const sortedYears = [...years].sort((a, b) => b - a);
+                yearSelect.innerHTML = sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
+                if (sortedYears.includes(parseInt(prevYear, 10))) {
+                    yearSelect.value = prevYear;
+                } else {
+                    yearSelect.value = String(currentYear);
+                }
+            }
+        }
+
+        function applyFefoFilters() {
+            const materialVal = (document.getElementById('fefoFilterMaterial') || {}).value || '';
+            const customerVal = (document.getElementById('fefoFilterCustomer') || {}).value || '';
+            const dateMode = (document.getElementById('fefoFilterDateMode') || {}).value || 'all';
+            const dateFrom = (document.getElementById('fefoFilterDateFrom') || {}).value || '';
+            const dateTo = (document.getElementById('fefoFilterDateTo') || {}).value || '';
+            const monthVal = (document.getElementById('fefoFilterMonth') || {}).value || '';
+            const yearVal = (document.getElementById('fefoFilterYear') || {}).value || '';
+            const quarterVal = (document.getElementById('fefoFilterQuarter') || {}).value || '';
+
+            const filtered = allFefoViolations.filter(v => {
+                if (materialVal && v.material_code !== materialVal) return false;
+                if (customerVal && v.violator.customer_name !== customerVal) return false;
+
+                if (dateMode !== 'all') {
+                    const rdd = v.violator.required_delivery_date ? new Date(v.violator.required_delivery_date) : null;
+                    if (!rdd || isNaN(rdd)) return false;
+
+                    if (dateMode === 'range') {
+                        if (dateFrom && rdd < new Date(dateFrom)) return false;
+                        if (dateTo && rdd > new Date(dateTo + 'T23:59:59')) return false;
+                    } else if (dateMode === 'month') {
+                        if (monthVal) {
+                            const [y, m] = monthVal.split('-').map(Number);
+                            if (rdd.getFullYear() !== y || (rdd.getMonth() + 1) !== m) return false;
+                        }
+                    } else if (dateMode === 'quarter') {
+                        if (yearVal && rdd.getFullYear() !== parseInt(yearVal, 10)) return false;
+                        if (quarterVal) {
+                            const q = Math.floor(rdd.getMonth() / 3) + 1;
+                            if (q !== parseInt(quarterVal, 10)) return false;
+                        }
+                    }
+                }
+                return true;
+            });
+
+            renderFEFOViolationsTable(filtered);
+            return filtered;
+        }
+
+        function setupFefoFilters() {
+            const modeSelect = document.getElementById('fefoFilterDateMode');
+            const rangeWrap = document.getElementById('fefoDateRangeWrap');
+            const monthWrap = document.getElementById('fefoMonthWrap');
+            const quarterWrap = document.getElementById('fefoQuarterWrap');
+
+            function syncDateModeVisibility() {
+                const mode = modeSelect.value;
+                rangeWrap.classList.toggle('hidden', mode !== 'range');
+                rangeWrap.classList.toggle('flex', mode === 'range');
+                monthWrap.classList.toggle('hidden', mode !== 'month');
+                monthWrap.classList.toggle('flex', mode === 'month');
+                quarterWrap.classList.toggle('hidden', mode !== 'quarter');
+                quarterWrap.classList.toggle('flex', mode === 'quarter');
+            }
+
+            modeSelect.addEventListener('change', () => { syncDateModeVisibility(); applyFefoFilters(); });
+            syncDateModeVisibility();
+
+            ['fefoFilterMaterial', 'fefoFilterCustomer', 'fefoFilterDateFrom', 'fefoFilterDateTo', 'fefoFilterMonth', 'fefoFilterYear', 'fefoFilterQuarter'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', applyFefoFilters);
+            });
+
+            document.getElementById('fefoFilterResetBtn').addEventListener('click', () => {
+                document.getElementById('fefoFilterMaterial').value = '';
+                document.getElementById('fefoFilterCustomer').value = '';
+                document.getElementById('fefoFilterDateMode').value = 'all';
+                document.getElementById('fefoFilterDateFrom').value = '';
+                document.getElementById('fefoFilterDateTo').value = '';
+                document.getElementById('fefoFilterMonth').value = '';
+                document.getElementById('fefoFilterQuarter').value = '1';
+                syncDateModeVisibility();
+                applyFefoFilters();
+            });
+
+            document.getElementById('fefoExportBtn').addEventListener('click', () => {
+                const filtered = applyFefoFilters();
+                exportFefoViolationsCSV(filtered);
+            });
+        }
+
+        function exportFefoViolationsCSV(violations) {
+            if (!violations || violations.length === 0) {
+                alert("No FEFO violation records match the current filters to export.");
+                return;
+            }
+            const headers = ['Material', 'Description', 'Customer', 'Sales Order', 'RDD', 'Batch Served', 'Batch Served Expiry', 'Batch Violated/Bypassed', 'Batch Violated Expiry', 'Gap (Days)', 'Remarks'];
+            const lines = [headers.map(csvEscapeField).join(',')];
+
+            violations.forEach(v => {
+                const cells = [
+                    v.material_code,
+                    v.desc,
+                    v.violator.customer_name,
+                    v.violator.sales_order,
+                    v.violator.required_delivery_date,
+                    v.violator.batch_code,
+                    v.violator.expiration_date,
+                    v.bypassed.batch_code,
+                    v.bypassed.expiration_date,
+                    v.gapDays,
+                    v.violator.remarks
+                ].map(csvEscapeField);
+                lines.push(cells.join(','));
+            });
+
+            const csvContent = '\uFEFF' + lines.join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const d = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const ts = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+            link.href = url;
+            link.download = `fefo_violations_${ts}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // ============================================================
+        // FEFO REASON MANAGEMENT (Admin-managed remark quick-picks)
+        // ============================================================
+        function isAdminUser() {
+            const user = sessionStorage.getItem(AUTH_SESSION_KEY) || '';
+            return user.trim().toLowerCase() === 'admin';
+        }
+
+        function getDefaultFefoReasons() {
+            return [
+                'Approved by Account',
+                'Customer Priority Request',
+                'System / Auto-Release Sequencing',
+                'Warehouse Picking Correction Logged',
+                'Near-Expiry Clearance Directive'
+            ];
+        }
+
+        function loadFefoReasons() {
+            try {
+                const raw = localStorage.getItem(FEFO_REASONS_KEY);
+                if (!raw) return getDefaultFefoReasons();
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                return getDefaultFefoReasons();
+            } catch (e) {
+                return getDefaultFefoReasons();
+            }
+        }
+
+        function saveFefoReasonsToStorage(arr) {
+            localStorage.setItem(FEFO_REASONS_KEY, JSON.stringify(arr));
+        }
+
+        function renderFefoReasonsManagerList() {
+            const listEl = document.getElementById('fefoReasonsList');
+            const reasons = loadFefoReasons();
+            listEl.innerHTML = reasons.map((r, idx) => `
+                <li class="flex items-center justify-between px-3 py-2 text-xs text-slate-700 dark:text-slate-300">
+                    <span>${escapeHtml(r)}</span>
+                    <button data-idx="${idx}" data-role="fefoDeleteReason" class="text-red-500 hover:text-red-700 text-[11px] font-bold">Remove</button>
+                </li>
+            `).join('') || '<li class="px-3 py-4 text-center text-slate-400 italic text-xs">No reasons configured yet.</li>';
+
+            listEl.querySelectorAll('[data-role="fefoDeleteReason"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                    const current = loadFefoReasons();
+                    current.splice(idx, 1);
+                    saveFefoReasonsToStorage(current);
+                    renderFefoReasonsManagerList();
+                    applyFefoFilters();
+                });
+            });
+        }
+
+        function setupFefoReasonManagerUI() {
+            const manageBtn = document.getElementById('fefoManageReasonsBtn');
+            const modal = document.getElementById('fefoReasonsModal');
+            const closeBtn = document.getElementById('fefoReasonsModalCloseBtn');
+            const doneBtn = document.getElementById('fefoReasonsModalDoneBtn');
+            const addBtn = document.getElementById('fefoAddReasonBtn');
+            const input = document.getElementById('fefoNewReasonInput');
+
+            manageBtn.classList.toggle('hidden', !isAdminUser());
+
+            function openModal() {
+                renderFefoReasonsManagerList();
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            manageBtn.addEventListener('click', openModal);
+            closeBtn.addEventListener('click', closeModal);
+            doneBtn.addEventListener('click', closeModal);
+
+            addBtn.addEventListener('click', () => {
+                const val = input.value.trim();
+                if (!val) return;
+                const current = loadFefoReasons();
+                if (current.some(r => r.toLowerCase() === val.toLowerCase())) {
+                    alert("This reason already exists in the list.");
+                    return;
+                }
+                current.push(val);
+                saveFefoReasonsToStorage(current);
+                input.value = '';
+                renderFefoReasonsManagerList();
+                applyFefoFilters();
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addBtn.click();
+                }
             });
         }
 

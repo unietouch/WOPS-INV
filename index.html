@@ -3211,23 +3211,60 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             return (str || '').trim();
         }
 
+        function normalizeHeaderLabel(s) {
+            return (s || '').toString().trim().toUpperCase().replace(/\s+/g, ' ').replace(/[.:]+$/, '');
+        }
+
+        // Builds a { NORMALIZED HEADER LABEL -> column key } lookup for a task type,
+        // so pasted headers can be matched regardless of casing/spacing.
+        function buildHeaderMap(cfg) {
+            const map = {};
+            cfg.headers.forEach((h, i) => {
+                map[normalizeHeaderLabel(h)] = cfg.columns[i];
+            });
+            return map;
+        }
+
         function parseTaskPaste(type, text) {
             const cfg = TASK_TYPE_CONFIG[type];
             const lines = text.split(/\r?\n/).map(l => l).filter(l => l.trim() !== '');
             const rows = [];
             let skipped = 0;
+            if (lines.length === 0) return { rows, skipped };
 
-            lines.forEach((line, idx) => {
+            const headerMap = buildHeaderMap(cfg);
+
+            // Look at the first line: if enough of its cells match known header labels
+            // (in any order), treat it as a header row and map columns BY NAME instead
+            // of by position. This way the paste works even if the column arrangement
+            // doesn't match the expected layout, as long as the header names are right.
+            const firstCells = lines[0].split('\t').map(c => c.trim());
+            const matchedHeaderCount = firstCells.filter(c => c && headerMap[normalizeHeaderLabel(c)]).length;
+            const isHeaderRow = matchedHeaderCount >= Math.min(2, cfg.columns.length);
+
+            let colOrder;   // column key per pasted cell position (null = unrecognized/ignored)
+            let dataLines;
+
+            if (isHeaderRow) {
+                colOrder = firstCells.map(c => headerMap[normalizeHeaderLabel(c)] || null);
+                dataLines = lines.slice(1);
+            } else {
+                // No recognizable header row — fall back to the expected fixed column order.
+                colOrder = cfg.columns.slice();
+                dataLines = lines;
+            }
+
+            dataLines.forEach(line => {
                 const cells = line.split('\t').map(c => c.trim());
-                // Skip an obvious header row (first line matching the expected header label)
-                if (idx === 0 && cells[0] && cfg.headers[0] &&
-                    cells[0].toUpperCase().replace(/\s+/g, ' ') === cfg.headers[0].toUpperCase().replace(/\s+/g, ' ')) {
-                    return;
-                }
                 if (cells.length < 2) { skipped++; return; }
 
+                // Start every expected column as null so missing/unrecognized columns
+                // still render/save consistently, then fill in whatever was matched.
                 const obj = {};
-                cfg.columns.forEach((col, i) => {
+                cfg.columns.forEach(col => { obj[col] = null; });
+
+                colOrder.forEach((col, i) => {
+                    if (!col) return; // column position wasn't recognized — ignore it
                     let val = cells[i] !== undefined ? cells[i] : '';
                     if (col === 'qty') {
                         const n = parseFloat(String(val).replace(/,/g, ''));
@@ -3313,7 +3350,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
             function updateHint() {
                 const cfg = TASK_TYPE_CONFIG[taskActiveType];
-                hintEl.textContent = 'Expected columns: ' + cfg.headers.join('  |  ');
+                hintEl.textContent = 'Recognized columns (any order, header row required to reorder): ' + cfg.headers.join('  |  ');
             }
             updateHint();
 

@@ -769,10 +769,23 @@
                             </div>
                         </div>
 
+                        <!-- Mass Edit Toolbar (appears once one or more rows are selected) -->
+                        <div id="taskMassEditBar" class="hidden flex flex-wrap items-center gap-2 mb-3 p-3 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30">
+                            <span class="text-xs font-bold text-blue-700 dark:text-blue-300"><span id="taskMassEditCount">0</span> selected</span>
+                            <div class="flex flex-wrap gap-1.5 ml-2">
+                                <button type="button" id="taskMassPrintedOnBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition">✅ Mark Printed</button>
+                                <button type="button" id="taskMassPrintedOffBtn" class="border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition">↩️ Unmark Printed</button>
+                                <button type="button" id="taskMassDoneOnBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition">✅ Mark Task Done</button>
+                                <button type="button" id="taskMassDoneOffBtn" class="border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition">↩️ Unmark Task Done</button>
+                            </div>
+                            <button type="button" id="taskMassClearSelectionBtn" class="ml-auto text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white">✖ Clear Selection</button>
+                        </div>
+
                         <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800 max-h-[520px] overflow-y-auto">
                             <table class="w-full text-left text-xs border-collapse">
                                 <thead class="sticky top-0 bg-slate-50 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
                                     <tr>
+                                        <th class="px-3 py-3.5 w-8"><input type="checkbox" id="taskRecordSelectAll" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer"></th>
                                         <th class="px-3 py-3.5">Date</th>
                                         <th class="px-3 py-3.5">Reference / SKU</th>
                                         <th class="px-3 py-3.5">Area</th>
@@ -784,7 +797,7 @@
                                 </thead>
                                 <tbody id="taskRecordTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                                     <tr>
-                                        <td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
+                                        <td colspan="8" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -3153,6 +3166,27 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             }
         };
 
+        // Storage bin -> correct Area lookup. Whenever a pasted/uploaded row for the
+        // "Storage" record type carries a STORAGE bin code found here, the AREA column
+        // is auto-corrected (overwritten) to the mapped value, regardless of whatever
+        // area value came in the pasted data.
+        const STORAGE_AREA_MAP = {
+            'BWOFEA': 'BST3', 'BWOFEB': 'BST3', 'BWOFEC': 'BST3', 'BWOFED': 'BST3',
+            'BWOFED-YE': 'BST3', 'BWOFEE': 'BST3', 'BWOFEF': 'BST3', 'BWOFEG': 'BST3', 'BWOFEH': 'BST3',
+            'BWOFFA': 'BST4', 'BWOFFA-YE': 'BST4', 'BWOFFB': 'BST4', 'BWOFFC': 'BST4', 'BWOFFC-YE': 'BST4',
+            'BWOFFD': 'BST4', 'BWOFFE': 'BST4', 'BWOFFE-YE': 'BST4', 'BWOFFF': 'BST4', 'BWOFFG': 'BST4', 'BWOFFH': 'BST4',
+            'BWOFGA': 'BST5', 'BWOFGA-YE': 'BST5', 'BWOFGB': 'BST5', 'BWOFGC': 'BST5', 'BWOFGD': 'BST5',
+            'BWOFGD-YE': 'BST5', 'BWOFGE': 'BST5', 'BWOFGF': 'BST5', 'BWOFGF-YE': 'BST5', 'BWOFGG': 'BST5',
+            'IBD-STAGING': 'BST5'
+        };
+
+        function applyStorageAreaMap(obj) {
+            if (obj.storage === undefined) return;
+            const key = (obj.storage || '').toString().trim().toUpperCase();
+            const mappedArea = STORAGE_AREA_MAP[key];
+            if (mappedArea) obj.area = mappedArea;
+        }
+
         let taskActiveType = 'storage';
         let taskParsedRows = null;
         let taskRecordActiveType = 'storage';
@@ -3200,6 +3234,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     }
                     obj[col] = val === '' ? null : val;
                 });
+                if (type === 'storage') applyStorageAreaMap(obj);
                 rows.push(obj);
             });
 
@@ -3347,6 +3382,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('taskRecordLoadBtn').addEventListener('click', loadTaskRecordChecklist);
             document.getElementById('taskRecordAreaFilter').addEventListener('change', loadTaskRecordChecklist);
             document.getElementById('taskRecordPendingOnly').addEventListener('change', loadTaskRecordChecklist);
+            setupTaskMassEditBar();
 
             // --- Checkpoint Report wiring ---
             const reportDateInput = document.getElementById('taskReportDate');
@@ -3361,7 +3397,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         async function loadTaskRecordChecklist() {
             const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
             const tbody = document.getElementById('taskRecordTableBody');
-            tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
 
             const selectCols = `id,${cfg.dateField},${cfg.identifierField}${cfg.descField ? ',' + cfg.descField : ''},${cfg.areaField},printed,time_printed,task,time_task_done`;
             let rows;
@@ -3369,7 +3405,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 rows = await fetchAllRowsChecked(cfg.table, selectCols);
             } catch (err) {
                 console.error('loadTaskRecordChecklist failed:', err);
-                tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
                 alert(`❌ Failed to load ${cfg.label} records:\n${err.message}\n\nThis usually means the "${cfg.areaField}" (or another selected) column doesn't exist yet on the "${cfg.table}" table.`);
                 return;
             }
@@ -3397,10 +3433,17 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             return s === 'YES' || s === 'TRUE' || s === '1' || s === 'Y' || s === 'X' || s === 'DONE' || s === 'PRINTED';
         }
 
+        let taskSelectedIds = new Set();
+
         function renderTaskRecordChecklist(cfg, rows) {
             const tbody = document.getElementById('taskRecordTableBody');
+            taskSelectedIds = new Set();
+            updateTaskMassEditBar();
+            const selectAllCb = document.getElementById('taskRecordSelectAll');
+            if (selectAllCb) selectAllCb.checked = false;
+
             if (!rows || rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
                 return;
             }
 
@@ -3413,6 +3456,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     ? `${identifier} <span class="text-slate-400 dark:text-slate-500 font-normal">— ${escapeHtml(desc)}</span>`
                     : identifier;
                 return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-row-id="${r.id}">
+                    <td class="px-3 py-2.5">
+                        <input type="checkbox" class="taskRowSelectCheckbox w-3.5 h-3.5 accent-blue-600 cursor-pointer" data-id="${r.id}">
+                    </td>
                     <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${escapeHtml(r[cfg.dateField])}</td>
                     <td class="px-3 py-2.5">${identifierHtml}</td>
                     <td class="px-3 py-2.5 font-bold">${escapeHtml(r[cfg.areaField])}</td>
@@ -3439,10 +3485,84 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             tbody.querySelectorAll('.taskDoneCheckbox').forEach(cb => {
                 cb.addEventListener('change', (e) => handleTaskCheckboxToggle(e.target, 'task', 'time_task_done', 'timeTaskDoneCell'));
             });
+            tbody.querySelectorAll('.taskRowSelectCheckbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const id = parseInt(e.target.dataset.id, 10);
+                    if (e.target.checked) taskSelectedIds.add(id);
+                    else taskSelectedIds.delete(id);
+                    updateTaskMassEditBar();
+                });
+            });
 
             // Admin-only visibility for the timestamp-edit pencils (delegated click handler is
             // wired once in setupTaskTimeEditModal(), so we only need to show/hide here).
             tbody.classList.toggle('admin-edit-mode', isAdminUser());
+        }
+
+        // ============================================================
+        // MASS EDIT — bulk Printed / Task Done updates for selected rows
+        // ============================================================
+        function updateTaskMassEditBar() {
+            const bar = document.getElementById('taskMassEditBar');
+            const countEl = document.getElementById('taskMassEditCount');
+            if (!bar || !countEl) return;
+            countEl.textContent = taskSelectedIds.size;
+            bar.classList.toggle('hidden', taskSelectedIds.size === 0);
+        }
+
+        async function massUpdateSelectedTaskRows(statusField, timeField, timeCellClass, turnOn) {
+            if (taskSelectedIds.size === 0) return;
+            const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
+            const ids = Array.from(taskSelectedIds);
+            const label = statusField === 'printed' ? 'Printed' : 'Task Done';
+            if (!confirm(`${turnOn ? 'Mark' : 'Unmark'} ${label} for ${ids.length} selected record(s)?`)) return;
+
+            const stamp = turnOn ? nowStampLocal() : null;
+            const payload = { [statusField]: turnOn ? 'YES' : null, [timeField]: stamp };
+
+            const { error } = await _supabase.from(cfg.table).update(payload).in('id', ids);
+            if (error) {
+                alert(`❌ Mass update failed: ${error.message}`);
+                return;
+            }
+
+            ids.forEach(id => {
+                const row = tbodyRowFor(id);
+                if (row) {
+                    const cell = row.querySelector('.' + timeCellClass);
+                    if (cell) cell.textContent = stamp || '';
+                    const checkboxSelector = statusField === 'printed' ? '.taskPrintedCheckbox' : '.taskDoneCheckbox';
+                    const checkbox = row.querySelector(checkboxSelector);
+                    if (checkbox) checkbox.checked = turnOn;
+                }
+                const local = taskRecordRows.find(r => r.id === id);
+                if (local) {
+                    local[statusField] = payload[statusField];
+                    local[timeField] = payload[timeField];
+                }
+            });
+        }
+
+        function setupTaskMassEditBar() {
+            document.getElementById('taskRecordSelectAll').addEventListener('change', (e) => {
+                const checked = e.target.checked;
+                taskSelectedIds = new Set();
+                document.querySelectorAll('.taskRowSelectCheckbox').forEach(cb => {
+                    cb.checked = checked;
+                    if (checked) taskSelectedIds.add(parseInt(cb.dataset.id, 10));
+                });
+                updateTaskMassEditBar();
+            });
+            document.getElementById('taskMassClearSelectionBtn').addEventListener('click', () => {
+                taskSelectedIds = new Set();
+                document.querySelectorAll('.taskRowSelectCheckbox').forEach(cb => cb.checked = false);
+                document.getElementById('taskRecordSelectAll').checked = false;
+                updateTaskMassEditBar();
+            });
+            document.getElementById('taskMassPrintedOnBtn').addEventListener('click', () => massUpdateSelectedTaskRows('printed', 'time_printed', 'timePrintedCell', true));
+            document.getElementById('taskMassPrintedOffBtn').addEventListener('click', () => massUpdateSelectedTaskRows('printed', 'time_printed', 'timePrintedCell', false));
+            document.getElementById('taskMassDoneOnBtn').addEventListener('click', () => massUpdateSelectedTaskRows('task', 'time_task_done', 'timeTaskDoneCell', true));
+            document.getElementById('taskMassDoneOffBtn').addEventListener('click', () => massUpdateSelectedTaskRows('task', 'time_task_done', 'timeTaskDoneCell', false));
         }
 
         async function handleTaskCheckboxToggle(checkbox, statusField, timeField, timeCellClass) {

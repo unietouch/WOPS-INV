@@ -2745,6 +2745,14 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             return user.trim().toLowerCase() === 'admin';
         }
 
+        // whsefl is allowed into the Live Task Checklist but is restricted to ticking/
+        // unticking Task Done only — the Printed checkbox (and its mass-edit buttons)
+        // stay locked for this user.
+        function isPrintedCheckboxRestrictedUser() {
+            const user = sessionStorage.getItem(AUTH_SESSION_KEY) || '';
+            return user.trim().toLowerCase() === 'whsefl';
+        }
+
         function getDefaultFefoReasons() {
             return [
                 'Approved by Account',
@@ -3598,6 +3606,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 return;
             }
 
+            const printedLocked = isPrintedCheckboxRestrictedUser();
+
             tbody.innerHTML = rows.map(r => {
                 const printedChecked = isChecked(r.printed);
                 const taskChecked = isChecked(r.task);
@@ -3617,7 +3627,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     <td class="px-3 py-2.5 text-right">${cfg.qtyField ? escapeHtml(r[cfg.qtyField]) : ''}</td>
                     <td class="px-3 py-2.5 font-bold">${escapeHtml(r[cfg.areaField])}</td>
                     <td class="px-3 py-2.5 text-center">
-                        <input type="checkbox" class="taskPrintedCheckbox w-4 h-4 accent-blue-600 cursor-pointer" data-id="${r.id}" ${printedChecked ? 'checked' : ''}>
+                        <input type="checkbox" class="taskPrintedCheckbox w-4 h-4 accent-blue-600 ${printedLocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}" data-id="${r.id}" ${printedChecked ? 'checked' : ''} ${printedLocked ? 'disabled title="Only Task Done can be changed by this account"' : ''}>
                     </td>
                     <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         <span class="timePrintedCell">${escapeHtml(r.time_printed)}</span>
@@ -3666,6 +3676,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         async function massUpdateSelectedTaskRows(statusField, timeField, timeCellClass, turnOn) {
             if (taskSelectedIds.size === 0) return;
+            if (statusField === 'printed' && isPrintedCheckboxRestrictedUser()) return;
             const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
             const ids = Array.from(taskSelectedIds);
             const label = statusField === 'printed' ? 'Printed' : 'Task Done';
@@ -3717,9 +3728,17 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('taskMassPrintedOffBtn').addEventListener('click', () => massUpdateSelectedTaskRows('printed', 'time_printed', 'timePrintedCell', false));
             document.getElementById('taskMassDoneOnBtn').addEventListener('click', () => massUpdateSelectedTaskRows('task', 'time_task_done', 'timeTaskDoneCell', true));
             document.getElementById('taskMassDoneOffBtn').addEventListener('click', () => massUpdateSelectedTaskRows('task', 'time_task_done', 'timeTaskDoneCell', false));
+            if (isPrintedCheckboxRestrictedUser()) {
+                document.getElementById('taskMassPrintedOnBtn').classList.add('hidden');
+                document.getElementById('taskMassPrintedOffBtn').classList.add('hidden');
+            }
         }
 
         async function handleTaskCheckboxToggle(checkbox, statusField, timeField, timeCellClass) {
+            if (statusField === 'printed' && isPrintedCheckboxRestrictedUser()) {
+                checkbox.checked = !checkbox.checked; // revert any bypass of the disabled attribute
+                return;
+            }
             const id = parseInt(checkbox.dataset.id, 10);
             const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
             const isNowChecked = checkbox.checked;

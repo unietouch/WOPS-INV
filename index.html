@@ -3150,8 +3150,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 identifierField: 'material',
                 descField: 'description',
                 areaField: 'area',
-                columns: ['posting_date','pick_time','material_doc','material','description','destination','mvt','qty','um','batch','username','printed','time_printed','task','time_task_done','column1','executed_by'],
-                headers: ['Posting Date','Time','Material Doc','Material','Description','DESTINATION','MVT','QTY','UM','BATCH','UserName','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','Column1','EXECUTED BY']
+                columns: ['posting_date','pick_time','material_doc','material','description','destination','area','mvt','qty','um','batch','username','printed','time_printed','task','time_task_done','column1','executed_by'],
+                headers: ['Posting Date','Time','Material Doc','Material','Description','DESTINATION','AREA','MVT','QTY','UM','BATCH','UserName','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','Column1','EXECUTED BY']
             },
             reserved: {
                 table: 'task_reserved',
@@ -3166,9 +3166,10 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             }
         };
 
-        // Storage bin -> correct Area lookup. Whenever a pasted/uploaded row for the
-        // "Storage" record type carries a STORAGE bin code found here, the AREA column
-        // is auto-corrected (overwritten) to the mapped value, regardless of whatever
+        // Storage/destination bin -> correct Area lookup. Whenever a pasted/uploaded row for
+        // the "Storage" type (via its STORAGE column) or the "Picking" type (via its
+        // DESTINATION column) carries a bin code found here, the AREA column is
+        // auto-corrected (overwritten) to the mapped value, regardless of whatever
         // area value came in the pasted data.
         const STORAGE_AREA_MAP = {
             'BWOFEA': 'BST3', 'BWOFEB': 'BST3', 'BWOFEC': 'BST3', 'BWOFED': 'BST3',
@@ -3180,9 +3181,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             'IBD-STAGING': 'BST5'
         };
 
-        function applyStorageAreaMap(obj) {
-            if (obj.storage === undefined) return;
-            const key = (obj.storage || '').toString().trim().toUpperCase();
+        function applyStorageAreaMap(obj, sourceField) {
+            if (obj[sourceField] === undefined) return;
+            const key = (obj[sourceField] || '').toString().trim().toUpperCase();
             const mappedArea = STORAGE_AREA_MAP[key];
             if (mappedArea) obj.area = mappedArea;
         }
@@ -3234,7 +3235,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     }
                     obj[col] = val === '' ? null : val;
                 });
-                if (type === 'storage') applyStorageAreaMap(obj);
+                if (type === 'storage') applyStorageAreaMap(obj, 'storage');
+                if (type === 'picking') applyStorageAreaMap(obj, 'destination');
                 rows.push(obj);
             });
 

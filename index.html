@@ -4149,6 +4149,22 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             return (d && !isNaN(d.getTime())) ? d : null;
         }
 
+        // Returns the current wall-clock date/time in Asia/Manila, regardless of
+        // the browser's own timezone, as a plain (non-timezone-aware) Date object
+        // so it can be compared directly against the naive checkpoint cutoff Dates.
+        function getPHNowAsNaiveDate() {
+            const fmt = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Manila',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            });
+            const parts = {};
+            fmt.formatToParts(new Date()).forEach(p => { if (p.type !== 'literal') parts[p.type] = parseInt(p.value, 10); });
+            if (parts.hour === 24) parts.hour = 0; // some engines report midnight as 24
+            return new Date(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+        }
+
         async function generateCheckpointReport() {
             const tbody = document.getElementById('taskReportTableBody');
             const reportDateStr = document.getElementById('taskReportDate').value;
@@ -4172,6 +4188,16 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             const combined = [...storageRows, ...pickingRows, ...reservedRows];
 
             const [ry, rm, rd] = reportDateStr.split('-').map(n => parseInt(n, 10));
+
+            // Figure out which checkpoints haven't actually happened yet (PH time),
+            // so we don't pre-fill 0/0/0/— for a time slot that hasn't arrived.
+            const phNow = getPHNowAsNaiveDate();
+            const checkpointReached = REPORT_CHECKPOINTS.map(cp => {
+                const cutoff = cp.hour === 24
+                    ? new Date(ry, rm - 1, rd + 1, 0, 0, 0)
+                    : new Date(ry, rm - 1, rd, cp.hour, cp.minute, 0);
+                return phNow >= cutoff;
+            });
 
             // Build per-area tallies across the 4 checkpoints
             const areaMap = {};
@@ -4209,7 +4235,10 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             }
 
             tbody.innerHTML = areaNames.map(name => {
-                const cells = areaMap[name].map(t => {
+                const cells = areaMap[name].map((t, i) => {
+                    if (!checkpointReached[i]) {
+                        return `<td class="px-3 py-2.5 text-right border-l border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 text-slate-300 dark:text-slate-600 italic" colspan="4" title="This checkpoint hasn't happened yet (PH time).">not yet</td>`;
+                    }
                     const pending = Math.max(t.printed - t.done, 0);
                     const fillRate = t.printed > 0 ? (t.done / t.printed * 100) : null;
                     const fillRateLabel = fillRate === null ? '—' : `${Math.round(fillRate)}%`;

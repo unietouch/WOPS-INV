@@ -794,6 +794,9 @@
                                         <th class="px-3 py-3.5 w-8"><input type="checkbox" id="taskRecordSelectAll" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer"></th>
                                         <th class="px-3 py-3.5">Date</th>
                                         <th class="px-3 py-3.5">Reference / SKU</th>
+                                        <th class="px-3 py-3.5">Storage</th>
+                                        <th class="px-3 py-3.5">Batch</th>
+                                        <th class="px-3 py-3.5 text-right">Qty</th>
                                         <th class="px-3 py-3.5">Area</th>
                                         <th class="px-3 py-3.5 text-center">Printed</th>
                                         <th class="px-3 py-3.5">Time Printed</th>
@@ -803,7 +806,7 @@
                                 </thead>
                                 <tbody id="taskRecordTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                                     <tr>
-                                        <td colspan="8" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
+                                        <td colspan="11" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -3199,6 +3202,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 identifierField: 'product',
                 descField: 'product_short_desc',
                 areaField: 'area',
+                storageField: 'storage',
+                batchField: 'batch',
+                qtyField: 'qty',
                 columns: ['created_on','w_order','area','storage','product','product_short_desc','batch','qty','um','username','picking','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['Created On','W. ORDER','AREA','STORAGE','Product','Product Short Description','Batch','QTY','UM','USERNAME','PICKING','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             },
@@ -3210,6 +3216,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 identifierField: 'material',
                 descField: 'description',
                 areaField: 'area',
+                storageField: 'destination',
+                batchField: 'batch',
+                qtyField: 'qty',
                 columns: ['posting_date','pick_time','material_doc','material','description','destination','area','mvt','qty','um','batch','username','printed','time_printed','task','time_task_done','column1','executed_by'],
                 headers: ['Posting Date','Time','Material Doc','Material','Description','DESTINATION','AREA','MVT','QTY','UM','BATCH','UserName','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','Column1','EXECUTED BY']
             },
@@ -3221,6 +3230,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 identifierField: 'sku',
                 descField: null,
                 areaField: 'area',
+                storageField: null,
+                batchField: null,
+                qtyField: 'qty',
                 columns: ['activity_date','so_number','obd_no','rdd','customer','sku','qty','latest_served','w_o','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['DATE','S.O','OBD NO.','RDD','CUSTOMER','SKU','QTY','LATEST SERVED','W.O','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             }
@@ -3519,15 +3531,15 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         async function loadTaskRecordChecklist() {
             const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
             const tbody = document.getElementById('taskRecordTableBody');
-            tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
 
-            const selectCols = `id,${cfg.dateField},${cfg.identifierField}${cfg.descField ? ',' + cfg.descField : ''},${cfg.areaField},printed,time_printed,task,time_task_done`;
+            const selectCols = `id,${cfg.dateField},${cfg.identifierField}${cfg.descField ? ',' + cfg.descField : ''}${cfg.storageField ? ',' + cfg.storageField : ''}${cfg.batchField ? ',' + cfg.batchField : ''}${cfg.qtyField ? ',' + cfg.qtyField : ''},${cfg.areaField},printed,time_printed,task,time_task_done`;
             let rows;
             try {
                 rows = await fetchAllRowsChecked(cfg.table, selectCols);
             } catch (err) {
                 console.error('loadTaskRecordChecklist failed:', err);
-                tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
                 alert(`❌ Failed to load ${cfg.label} records:\n${err.message}\n\nThis usually means the "${cfg.areaField}" (or another selected) column doesn't exist yet on the "${cfg.table}" table.`);
                 return;
             }
@@ -3582,7 +3594,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             if (selectAllCb) selectAllCb.checked = false;
 
             if (!rows || rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
                 return;
             }
 
@@ -3600,6 +3612,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     </td>
                     <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${escapeHtml(r[cfg.dateField])}</td>
                     <td class="px-3 py-2.5">${identifierHtml}</td>
+                    <td class="px-3 py-2.5">${cfg.storageField ? escapeHtml(r[cfg.storageField]) : ''}</td>
+                    <td class="px-3 py-2.5">${cfg.batchField ? escapeHtml(r[cfg.batchField]) : ''}</td>
+                    <td class="px-3 py-2.5 text-right">${cfg.qtyField ? escapeHtml(r[cfg.qtyField]) : ''}</td>
                     <td class="px-3 py-2.5 font-bold">${escapeHtml(r[cfg.areaField])}</td>
                     <td class="px-3 py-2.5 text-center">
                         <input type="checkbox" class="taskPrintedCheckbox w-4 h-4 accent-blue-600 cursor-pointer" data-id="${r.id}" ${printedChecked ? 'checked' : ''}>

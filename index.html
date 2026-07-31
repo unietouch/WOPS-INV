@@ -137,6 +137,10 @@
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                         <span class="sidebar-text">Customer</span>
                     </button>
+                    <button id="tabBtnTaskLog" class="sidebar-item tab-btn w-full flex items-center px-3.5 py-3 text-xs font-bold rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 7l2 2 4-4"/></svg>
+                        <span class="sidebar-text">Task Execution Log</span>
+                    </button>
                 </nav>
             </div>
 
@@ -663,6 +667,90 @@
                     </div>
                 </div>
 
+                <!-- TAB 6: TASK EXECUTION LOG (STORAGE / PICKING / RESERVED CONSOLIDATION) -->
+                <div id="tabTaskLogView" class="tab-content hidden space-y-6">
+
+                    <!-- Paste Ingest Panel -->
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3 mb-2">Task Execution Log — Bulk Paste Ingest</h2>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-5">Paste directly from Excel for any of the three source types. All records consolidate below by Executed By &amp; Date.</p>
+
+                        <!-- Source Type Selector -->
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button type="button" data-tasktype="storage" class="taskTypeBtn px-4 py-2 text-xs font-bold rounded-lg border transition bg-blue-600 border-blue-600 text-white">📦 Storage</button>
+                            <button type="button" data-tasktype="picking" class="taskTypeBtn px-4 py-2 text-xs font-bold rounded-lg border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">🧾 Picking</button>
+                            <button type="button" data-tasktype="reserved" class="taskTypeBtn px-4 py-2 text-xs font-bold rounded-lg border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">📌 Reserved</button>
+                        </div>
+
+                        <p id="taskPasteHint" class="text-[10px] text-slate-400 dark:text-slate-500 mb-2 font-mono"></p>
+                        <textarea id="taskPasteTextarea" rows="8" spellcheck="false" placeholder="Paste tab-separated rows copied from Excel here (header row optional)..." class="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2.5 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            <button id="taskParseBtn" class="border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold px-4 py-2.5 rounded-lg transition">🔍 Preview</button>
+                            <button id="taskSaveBtn" disabled class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-md transition">💾 Save to Log</button>
+                            <button id="taskClearBtn" class="border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold px-4 py-2.5 rounded-lg transition ml-auto">✖ Clear</button>
+                        </div>
+
+                        <p id="taskPreviewCount" class="text-xs font-bold text-slate-600 dark:text-slate-300 mt-4 mb-1"></p>
+                        <div id="taskPreviewWrap" class="hidden overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800 max-h-72 overflow-y-auto">
+                            <table class="w-full text-left text-[10px] border-collapse">
+                                <thead id="taskPreviewHead" class="sticky top-0 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider"></thead>
+                                <tbody id="taskPreviewBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300"></tbody>
+                            </table>
+                        </div>
+                        <div id="taskSaveResult" class="hidden text-xs border rounded-lg p-3 mt-3"></div>
+                    </div>
+
+                    <!-- Consolidated Summary Panel -->
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Consolidated Task Summary</h2>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Storage + Picking + Reserved, grouped by Executed By &amp; Date.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-end gap-2.5 mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Executed By</label>
+                                <input type="text" id="taskSummaryExecFilter" placeholder="Search name..." class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">From Date</label>
+                                <input type="date" id="taskSummaryDateFrom" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">To Date</label>
+                                <input type="date" id="taskSummaryDateTo" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 ml-auto mt-2 md:mt-0">
+                                <button id="taskSummaryClearBtn" class="border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg transition">✖ Clear</button>
+                                <button id="taskSummaryLoadBtn" class="bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">🔄 Load Summary</button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                        <th class="px-3 py-3.5">Date</th>
+                                        <th class="px-3 py-3.5">Executed By</th>
+                                        <th class="px-3 py-3.5 text-right">Storage Tasks</th>
+                                        <th class="px-3 py-3.5 text-right">Picking Tasks</th>
+                                        <th class="px-3 py-3.5 text-right">Reserved Tasks</th>
+                                        <th class="px-3 py-3.5 text-right">Total Tasks</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="taskSummaryTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="6" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Summary" to consolidate task records.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
@@ -985,6 +1073,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             setupReportView();
             setupFefoFilters();
             setupFefoReasonManagerUI();
+            setupTaskLogModule();
 
             await populateLookupData();
             await refreshAllLocalLedgerTables();
@@ -999,7 +1088,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 'tabBtnAllReservations': { id: 'tabAllReservationsView', title: 'All Reservation Logs', desc: 'Comprehensive Transactional Ledger Stream' },
                 'tabBtnReport': { id: 'tabReportView', title: 'Operational Analytics Report', desc: 'System Performance, Gaps & FEFO Alerts' },
                 'tabBtnMasterDB': { id: 'tabMasterDBView', title: 'Materials Master Registry', desc: 'Inventory Material SKU Mapping Index' },
-                'tabBtnCustomerDB': { id: 'tabCustomerDBView', title: 'Customer Account Index', desc: 'Logistics Partner & Client Account Matrix' }
+                'tabBtnCustomerDB': { id: 'tabCustomerDBView', title: 'Customer Account Index', desc: 'Logistics Partner & Client Account Matrix' },
+                'tabBtnTaskLog': { id: 'tabTaskLogView', title: 'Task Execution Log', desc: 'Consolidated Storage, Picking & Reservation Task Activity' }
             };
 
             const tabButtons = document.querySelectorAll('.tab-btn');
@@ -1031,6 +1121,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                         loadAllReservationsLedger();
                     } else if (targetInfo.id === 'tabReportView') {
                         loadReportsCoreData();
+                    } else if (targetInfo.id === 'tabTaskLogView') {
+                        loadTaskConsolidatedSummary();
                     }
                 });
             });
@@ -2861,6 +2953,275 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 closeEditModal();
                 loadAllReservationsLedger();
             });
+        }
+
+        // ============================================================
+        // TASK EXECUTION LOG MODULE (Storage / Picking / Reserved)
+        // ============================================================
+        const TASK_TYPE_CONFIG = {
+            storage: {
+                table: 'task_storage',
+                label: 'Storage',
+                dateHeader: 'Created On',
+                columns: ['created_on','w_order','area','storage','product','product_short_desc','batch','qty','um','username','picking','printed','time_printed','task','time_task_done','executed_by'],
+                headers: ['Created On','W. ORDER','AREA','STORAGE','Product','Product Short Description','Batch','QTY','UM','USERNAME','PICKING','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
+            },
+            picking: {
+                table: 'task_picking',
+                label: 'Picking',
+                dateHeader: 'Posting Date',
+                columns: ['posting_date','pick_time','material_doc','material','description','destination','mvt','qty','um','batch','username','printed','time_printed','task','time_task_done','column1','executed_by'],
+                headers: ['Posting Date','Time','Material Doc','Material','Description','DESTINATION','MVT','QTY','UM','BATCH','UserName','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','Column1','EXECUTED BY']
+            },
+            reserved: {
+                table: 'task_reserved',
+                label: 'Reserved',
+                dateHeader: 'Date',
+                columns: ['activity_date','so_number','obd_no','rdd','customer','sku','qty','latest_served','w_o','printed','time_printed','task','time_task_done','executed_by'],
+                headers: ['DATE','S.O','OBD NO.','RDD','CUSTOMER','SKU','QTY','LATEST SERVED','W.O','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
+            }
+        };
+
+        let taskActiveType = 'storage';
+        let taskParsedRows = null;
+
+        function normalizeDateKey(str) {
+            const d = parseAnyDate(str);
+            if (d && !isNaN(d.getTime())) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+            return (str || '').trim();
+        }
+
+        function parseTaskPaste(type, text) {
+            const cfg = TASK_TYPE_CONFIG[type];
+            const lines = text.split(/\r?\n/).map(l => l).filter(l => l.trim() !== '');
+            const rows = [];
+            let skipped = 0;
+
+            lines.forEach((line, idx) => {
+                const cells = line.split('\t').map(c => c.trim());
+                // Skip an obvious header row (first line matching the expected header label)
+                if (idx === 0 && cells[0] && cfg.headers[0] &&
+                    cells[0].toUpperCase().replace(/\s+/g, ' ') === cfg.headers[0].toUpperCase().replace(/\s+/g, ' ')) {
+                    return;
+                }
+                if (cells.length < 2) { skipped++; return; }
+
+                const obj = {};
+                cfg.columns.forEach((col, i) => {
+                    let val = cells[i] !== undefined ? cells[i] : '';
+                    if (col === 'qty') {
+                        const n = parseFloat(String(val).replace(/,/g, ''));
+                        val = isNaN(n) ? null : n;
+                    }
+                    obj[col] = val === '' ? null : val;
+                });
+                rows.push(obj);
+            });
+
+            return { rows, skipped };
+        }
+
+        function renderTaskPreview(type, rows) {
+            const cfg = TASK_TYPE_CONFIG[type];
+            const wrap = document.getElementById('taskPreviewWrap');
+            const head = document.getElementById('taskPreviewHead');
+            const body = document.getElementById('taskPreviewBody');
+            const countEl = document.getElementById('taskPreviewCount');
+
+            if (!rows || rows.length === 0) {
+                wrap.classList.add('hidden');
+                countEl.textContent = 'No valid rows parsed.';
+                return;
+            }
+
+            head.innerHTML = `<tr>${cfg.headers.map(h => `<th class="px-2.5 py-2 whitespace-nowrap">${escapeHtml(h)}</th>`).join('')}</tr>`;
+            const maxPreview = 200;
+            body.innerHTML = rows.slice(0, maxPreview).map(r => {
+                return `<tr>${cfg.columns.map(c => `<td class="px-2.5 py-1.5 whitespace-nowrap">${escapeHtml(r[c] === null || r[c] === undefined ? '' : r[c])}</td>`).join('')}</tr>`;
+            }).join('');
+
+            countEl.textContent = `${rows.length} row(s) parsed${rows.length > maxPreview ? ` (showing first ${maxPreview})` : ''} — Type: ${cfg.label}`;
+            wrap.classList.remove('hidden');
+        }
+
+        async function saveTaskRows(type, rows) {
+            const cfg = TASK_TYPE_CONFIG[type];
+            const chunkSize = 500;
+            let inserted = 0;
+            let failed = 0;
+            let firstError = null;
+
+            for (let i = 0; i < rows.length; i += chunkSize) {
+                const chunk = rows.slice(i, i + chunkSize);
+                const { error } = await _supabase.from(cfg.table).insert(chunk);
+                if (error) {
+                    failed += chunk.length;
+                    if (!firstError) firstError = error.message;
+                } else {
+                    inserted += chunk.length;
+                }
+            }
+            return { inserted, failed, firstError };
+        }
+
+        function renderTaskSaveResult(result) {
+            const box = document.getElementById('taskSaveResult');
+            box.classList.remove('hidden');
+            if (result.failed === 0) {
+                box.className = 'text-xs border rounded-lg p-3 mt-3 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 font-semibold';
+                box.textContent = `✅ Saved ${result.inserted} record(s) successfully.`;
+            } else {
+                box.className = 'text-xs border rounded-lg p-3 mt-3 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 font-semibold';
+                box.textContent = `⚠️ Saved ${result.inserted} record(s), ${result.failed} failed. ${result.firstError ? 'Error: ' + result.firstError : ''}`;
+            }
+        }
+
+        function resetTaskPasteUI() {
+            document.getElementById('taskPasteTextarea').value = '';
+            document.getElementById('taskPreviewWrap').classList.add('hidden');
+            document.getElementById('taskPreviewCount').textContent = '';
+            document.getElementById('taskSaveResult').classList.add('hidden');
+            document.getElementById('taskSaveBtn').disabled = true;
+            taskParsedRows = null;
+        }
+
+        function setupTaskLogModule() {
+            const typeButtons = document.querySelectorAll('.taskTypeBtn');
+            const hintEl = document.getElementById('taskPasteHint');
+
+            function updateHint() {
+                const cfg = TASK_TYPE_CONFIG[taskActiveType];
+                hintEl.textContent = 'Expected columns: ' + cfg.headers.join('  |  ');
+            }
+            updateHint();
+
+            typeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    taskActiveType = btn.dataset.tasktype;
+                    typeButtons.forEach(b => {
+                        b.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');
+                        b.classList.add('border-slate-200', 'dark:border-slate-700', 'text-slate-600', 'dark:text-slate-300');
+                    });
+                    btn.classList.add('bg-blue-600', 'border-blue-600', 'text-white');
+                    btn.classList.remove('border-slate-200', 'dark:border-slate-700', 'text-slate-600', 'dark:text-slate-300');
+                    updateHint();
+                    resetTaskPasteUI();
+                });
+            });
+
+            document.getElementById('taskParseBtn').addEventListener('click', () => {
+                const text = document.getElementById('taskPasteTextarea').value;
+                const { rows, skipped } = parseTaskPaste(taskActiveType, text);
+                taskParsedRows = rows;
+                document.getElementById('taskSaveResult').classList.add('hidden');
+                renderTaskPreview(taskActiveType, rows);
+                document.getElementById('taskSaveBtn').disabled = rows.length === 0;
+            });
+
+            document.getElementById('taskSaveBtn').addEventListener('click', async () => {
+                if (!taskParsedRows || taskParsedRows.length === 0) return;
+                const cfg = TASK_TYPE_CONFIG[taskActiveType];
+                if (!confirm(`Save ${taskParsedRows.length} ${cfg.label} record(s) to the Task Execution Log?`)) return;
+
+                const saveBtn = document.getElementById('taskSaveBtn');
+                saveBtn.disabled = true;
+                saveBtn.textContent = '⏳ Saving...';
+
+                const result = await saveTaskRows(taskActiveType, taskParsedRows);
+                renderTaskSaveResult(result);
+
+                saveBtn.textContent = '💾 Save to Log';
+                saveBtn.disabled = true;
+                taskParsedRows = null;
+            });
+
+            document.getElementById('taskClearBtn').addEventListener('click', resetTaskPasteUI);
+
+            document.getElementById('taskSummaryLoadBtn').addEventListener('click', loadTaskConsolidatedSummary);
+            document.getElementById('taskSummaryClearBtn').addEventListener('click', () => {
+                document.getElementById('taskSummaryExecFilter').value = '';
+                document.getElementById('taskSummaryDateFrom').value = '';
+                document.getElementById('taskSummaryDateTo').value = '';
+                loadTaskConsolidatedSummary();
+            });
+        }
+
+        async function fetchAllRows(table, selectCols) {
+            let out = [];
+            let start = 0;
+            const limit = 1000;
+            let hasMore = true;
+            while (hasMore) {
+                const { data, error } = await _supabase.from(table).select(selectCols).range(start, start + limit - 1);
+                if (error) { console.error(`[TaskLog fetch error: ${table}]`, error); break; }
+                out = out.concat(data || []);
+                if (!data || data.length < limit) hasMore = false; else start += limit;
+            }
+            return out;
+        }
+
+        async function loadTaskConsolidatedSummary() {
+            const tbody = document.getElementById('taskSummaryTableBody');
+            tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Consolidating task records...</td></tr>`;
+
+            const [storageRows, pickingRows, reservedRows] = await Promise.all([
+                fetchAllRows('task_storage', 'created_on,executed_by'),
+                fetchAllRows('task_picking', 'posting_date,executed_by'),
+                fetchAllRows('task_reserved', 'activity_date,executed_by')
+            ]);
+
+            const combined = [
+                ...storageRows.map(r => ({ type: 'storage', dateRaw: r.created_on, executedBy: r.executed_by })),
+                ...pickingRows.map(r => ({ type: 'picking', dateRaw: r.posting_date, executedBy: r.executed_by })),
+                ...reservedRows.map(r => ({ type: 'reserved', dateRaw: r.activity_date, executedBy: r.executed_by }))
+            ];
+
+            const execFilter = (document.getElementById('taskSummaryExecFilter').value || '').trim().toUpperCase();
+            const fromDate = document.getElementById('taskSummaryDateFrom').value || null;
+            const toDate = document.getElementById('taskSummaryDateTo').value || null;
+
+            const groups = {};
+            combined.forEach(item => {
+                const executedBy = (item.executedBy || 'UNASSIGNED').trim() || 'UNASSIGNED';
+                if (execFilter && !executedBy.toUpperCase().includes(execFilter)) return;
+
+                const dateKey = normalizeDateKey(item.dateRaw);
+                if (fromDate && dateKey < fromDate) return;
+                if (toDate && dateKey > toDate) return;
+
+                const key = `${dateKey}|||${executedBy}`;
+                if (!groups[key]) {
+                    groups[key] = { date: dateKey, executedBy, storage: 0, picking: 0, reserved: 0 };
+                }
+                groups[key][item.type]++;
+            });
+
+            const rows = Object.values(groups).sort((a, b) => {
+                if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+                return a.executedBy.localeCompare(b.executedBy);
+            });
+
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No task records match the current filters.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(r => {
+                const total = r.storage + r.picking + r.reserved;
+                return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td class="px-3 py-2.5 font-semibold">${escapeHtml(r.date)}</td>
+                    <td class="px-3 py-2.5 font-bold">${escapeHtml(r.executedBy)}</td>
+                    <td class="px-3 py-2.5 text-right">${r.storage || ''}</td>
+                    <td class="px-3 py-2.5 text-right">${r.picking || ''}</td>
+                    <td class="px-3 py-2.5 text-right">${r.reserved || ''}</td>
+                    <td class="px-3 py-2.5 text-right font-extrabold text-blue-600 dark:text-blue-400">${total}</td>
+                </tr>`;
+            }).join('');
         }
     </script>
 </body>

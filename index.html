@@ -581,7 +581,7 @@
                                 <button id="taskTimeEditModalCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
                             </div>
                             <div class="p-5 space-y-3">
-                                <p class="text-[11px] text-slate-400 dark:text-slate-500">Admin override — manually set the recorded date &amp; time for this checkpoint. Clearing the field and saving will un-tick the checkbox.</p>
+                                <p id="taskTimeEditModalDesc" class="text-[11px] text-slate-400 dark:text-slate-500">Admin override — manually set the recorded date &amp; time for this checkpoint. Clearing the field and saving will un-tick the checkbox.</p>
                                 <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Date &amp; Time</label>
                                 <input type="datetime-local" id="taskTimeEditInput" step="1" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
@@ -783,9 +783,12 @@
                                 <button type="button" id="taskMassPrintedOffBtn" class="border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition">↩️ Unmark Printed</button>
                                 <button type="button" id="taskMassDoneOnBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition">✅ Mark Task Done</button>
                                 <button type="button" id="taskMassDoneOffBtn" class="border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition">↩️ Unmark Task Done</button>
+                                <button type="button" id="taskMassSetPrintedTimeBtn" class="adminOnlyMassBtn hidden border border-blue-300 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[11px] font-bold px-3 py-1.5 rounded-lg transition">🛠️ Set Time Printed</button>
+                                <button type="button" id="taskMassSetDoneTimeBtn" class="adminOnlyMassBtn hidden border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold px-3 py-1.5 rounded-lg transition">🛠️ Set Time Task Done</button>
                             </div>
                             <button type="button" id="taskMassClearSelectionBtn" class="ml-auto text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white">✖ Clear Selection</button>
                         </div>
+
 
                         <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800 max-h-[520px] overflow-y-auto">
                             <table class="w-full text-left text-xs border-collapse">
@@ -3672,6 +3675,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             if (!bar || !countEl) return;
             countEl.textContent = taskSelectedIds.size;
             bar.classList.toggle('hidden', taskSelectedIds.size === 0);
+            document.querySelectorAll('.adminOnlyMassBtn').forEach(btn => {
+                btn.classList.toggle('hidden', !isAdminUser());
+            });
         }
 
         async function massUpdateSelectedTaskRows(statusField, timeField, timeCellClass, turnOn) {
@@ -3775,7 +3781,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         // ============================================================
         // ADMIN: Manual Timestamp Edit for Printed / Task Done
         // ============================================================
-        let taskTimeEditCtx = null; // { id, statusField, timeField, timeCellClass }
+        let taskTimeEditCtx = null; // { ids: [...], statusField, timeField, timeCellClass }
 
         // "YYYY-MM-DD HH:mm:ss" -> "YYYY-MM-DDTHH:mm:ss" (for <input type="datetime-local">)
         function stampToDatetimeLocal(stamp) {
@@ -3794,16 +3800,29 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             return `${datePart} ${timeFull}`;
         }
 
-        function openTaskTimeEditModal(id, statusField, timeField, timeCellClass) {
+        // ids: array of one (single-row pencil) or many (mass edit) record ids
+        function openTaskTimeEditModal(ids, statusField, timeField, timeCellClass) {
             try {
                 if (!isAdminUser()) return;
-                taskTimeEditCtx = { id: parseInt(id, 10), statusField, timeField, timeCellClass };
-                const local = taskRecordRows.find(r => r.id === taskTimeEditCtx.id);
-                const currentStamp = local ? local[timeField] : '';
+                if (!ids || ids.length === 0) return;
+                taskTimeEditCtx = { ids: ids.map(id => parseInt(id, 10)), statusField, timeField, timeCellClass };
+
+                const fieldLabel = timeField === 'time_printed' ? 'Time Printed' : 'Time Task Done';
+                const isMass = taskTimeEditCtx.ids.length > 1;
 
                 document.getElementById('taskTimeEditModalTitle').textContent =
-                    `🛠️ Edit ${timeField === 'time_printed' ? 'Time Printed' : 'Time Task Done'}`;
-                document.getElementById('taskTimeEditInput').value = stampToDatetimeLocal(currentStamp);
+                    isMass ? `🛠️ Set ${fieldLabel} — ${taskTimeEditCtx.ids.length} selected` : `🛠️ Edit ${fieldLabel}`;
+                document.getElementById('taskTimeEditModalDesc').textContent = isMass
+                    ? `Admin override — set the same date & time for ${taskTimeEditCtx.ids.length} selected records. Clearing the field and saving will un-tick the checkbox for all of them.`
+                    : 'Admin override — manually set the recorded date & time for this checkpoint. Clearing the field and saving will un-tick the checkbox.';
+
+                if (isMass) {
+                    document.getElementById('taskTimeEditInput').value = '';
+                } else {
+                    const local = taskRecordRows.find(r => r.id === taskTimeEditCtx.ids[0]);
+                    const currentStamp = local ? local[timeField] : '';
+                    document.getElementById('taskTimeEditInput').value = stampToDatetimeLocal(currentStamp);
+                }
 
                 const modal = document.getElementById('taskTimeEditModal');
                 modal.classList.remove('hidden');
@@ -3823,7 +3842,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         async function saveTaskTimeEdit(clear) {
             if (!taskTimeEditCtx) return;
-            const { id, statusField, timeField, timeCellClass } = taskTimeEditCtx;
+            const { ids, statusField, timeField, timeCellClass } = taskTimeEditCtx;
             const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
 
             const rawVal = clear ? '' : document.getElementById('taskTimeEditInput').value;
@@ -3846,7 +3865,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             clearBtn.disabled = true;
 
             try {
-                const { error } = await _supabase.from(cfg.table).update(payload).eq('id', id);
+                const { error } = await _supabase.from(cfg.table).update(payload).in('id', ids);
 
                 if (error) {
                     console.error('saveTaskTimeEdit update error:', error);
@@ -3854,19 +3873,21 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     return;
                 }
 
-                const row = tbodyRowFor(id);
-                if (row) {
-                    const cell = row.querySelector('.' + timeCellClass);
-                    if (cell) cell.textContent = stamp || '';
-                    const checkboxSelector = statusField === 'printed' ? '.taskPrintedCheckbox' : '.taskDoneCheckbox';
-                    const checkbox = row.querySelector(checkboxSelector);
-                    if (checkbox) checkbox.checked = !!stamp;
-                }
-                const local = taskRecordRows.find(r => r.id === id);
-                if (local) {
-                    local[statusField] = payload[statusField];
-                    local[timeField] = payload[timeField];
-                }
+                ids.forEach(id => {
+                    const row = tbodyRowFor(id);
+                    if (row) {
+                        const cell = row.querySelector('.' + timeCellClass);
+                        if (cell) cell.textContent = stamp || '';
+                        const checkboxSelector = statusField === 'printed' ? '.taskPrintedCheckbox' : '.taskDoneCheckbox';
+                        const checkbox = row.querySelector(checkboxSelector);
+                        if (checkbox) checkbox.checked = !!stamp;
+                    }
+                    const local = taskRecordRows.find(r => r.id === id);
+                    if (local) {
+                        local[statusField] = payload[statusField];
+                        local[timeField] = payload[timeField];
+                    }
+                });
 
                 closeTaskTimeEditModal();
             } catch (err) {
@@ -3894,11 +3915,22 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 if (!btn) return;
                 if (!isAdminUser()) return;
                 openTaskTimeEditModal(
-                    btn.dataset.id,
+                    [btn.dataset.id],
                     btn.dataset.statusField,
                     btn.dataset.timeField,
                     btn.dataset.timeCell
                 );
+            });
+
+            // Admin-only mass timestamp edit — applies the same date & time to every
+            // currently selected row's Printed or Task Done checkpoint.
+            document.getElementById('taskMassSetPrintedTimeBtn').addEventListener('click', () => {
+                if (!isAdminUser() || taskSelectedIds.size === 0) return;
+                openTaskTimeEditModal(Array.from(taskSelectedIds), 'printed', 'time_printed', 'timePrintedCell');
+            });
+            document.getElementById('taskMassSetDoneTimeBtn').addEventListener('click', () => {
+                if (!isAdminUser() || taskSelectedIds.size === 0) return;
+                openTaskTimeEditModal(Array.from(taskSelectedIds), 'task', 'time_task_done', 'timeTaskDoneCell');
             });
         }
 

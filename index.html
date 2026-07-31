@@ -1209,19 +1209,30 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         // Initialize Application Modules
         async function initApp() {
-            setCurrentTimestamp();
-            setupTabs();
-            setupEventListeners();
-            setupAutocompleteFields();
-            setupDBManagementTabs();
-            setupLedgerActions();
-            setupEditModal();
-            setupBulkStatusModal();
-            setupReportView();
-            setupFefoFilters();
-            setupFefoReasonManagerUI();
-            setupTaskLogModule();
-            setupTaskTimeEditModal();
+            const steps = [
+                ['setCurrentTimestamp', setCurrentTimestamp],
+                ['setupTabs', setupTabs],
+                ['setupEventListeners', setupEventListeners],
+                ['setupAutocompleteFields', setupAutocompleteFields],
+                ['setupDBManagementTabs', setupDBManagementTabs],
+                ['setupLedgerActions', setupLedgerActions],
+                ['setupEditModal', setupEditModal],
+                ['setupBulkStatusModal', setupBulkStatusModal],
+                ['setupReportView', setupReportView],
+                ['setupFefoFilters', setupFefoFilters],
+                ['setupFefoReasonManagerUI', setupFefoReasonManagerUI],
+                ['setupTaskLogModule', setupTaskLogModule],
+                ['setupTaskTimeEditModal', setupTaskTimeEditModal]
+            ];
+            for (const [name, fn] of steps) {
+                try {
+                    fn();
+                } catch (err) {
+                    // A failure in one module (e.g. a missing element ID) should not
+                    // silently prevent every module after it from wiring up.
+                    console.error(`[initApp] ${name} failed:`, err);
+                }
+            }
 
             await populateLookupData();
             await refreshAllLocalLedgerTables();
@@ -3353,7 +3364,15 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
 
             const selectCols = `id,${cfg.dateField},${cfg.identifierField}${cfg.descField ? ',' + cfg.descField : ''},${cfg.areaField},printed,time_printed,task,time_task_done`;
-            let rows = await fetchAllRows(cfg.table, selectCols);
+            let rows;
+            try {
+                rows = await fetchAllRowsChecked(cfg.table, selectCols);
+            } catch (err) {
+                console.error('loadTaskRecordChecklist failed:', err);
+                tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
+                alert(`❌ Failed to load ${cfg.label} records:\n${err.message}\n\nThis usually means the "${cfg.areaField}" (or another selected) column doesn't exist yet on the "${cfg.table}" table.`);
+                return;
+            }
 
             const areaFilter = document.getElementById('taskRecordAreaFilter').value;
             const pendingOnly = document.getElementById('taskRecordPendingOnly').value === '1';
@@ -3620,11 +3639,19 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
             tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Building checkpoint report...</td></tr>`;
 
-            const [storageRows, pickingRows, reservedRows] = await Promise.all([
-                fetchAllRows('task_storage', 'area,printed,time_printed,task,time_task_done'),
-                fetchAllRows('task_picking', 'area,printed,time_printed,task,time_task_done'),
-                fetchAllRows('task_reserved', 'area,printed,time_printed,task,time_task_done')
-            ]);
+            let storageRows, pickingRows, reservedRows;
+            try {
+                [storageRows, pickingRows, reservedRows] = await Promise.all([
+                    fetchAllRowsChecked('task_storage', 'area,printed,time_printed,task,time_task_done'),
+                    fetchAllRowsChecked('task_picking', 'area,printed,time_printed,task,time_task_done'),
+                    fetchAllRowsChecked('task_reserved', 'area,printed,time_printed,task,time_task_done')
+                ]);
+            } catch (err) {
+                console.error('generateCheckpointReport failed:', err);
+                tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to build report: ${escapeHtml(err.message)}</td></tr>`;
+                alert(`❌ Failed to build checkpoint report:\n${err.message}\n\nThis usually means the "area" column doesn't exist yet on one of the task tables.`);
+                return;
+            }
             const combined = [...storageRows, ...pickingRows, ...reservedRows];
 
             const [ry, rm, rd] = reportDateStr.split('-').map(n => parseInt(n, 10));
@@ -3700,15 +3727,42 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             return out;
         }
 
+        // Same pagination logic as fetchAllRows(), but THROWS on a DB error instead of
+        // swallowing it — used by the Task Log module so schema issues (e.g. a missing
+        // "area" column) surface as a visible alert instead of silently returning zero rows.
+        async function fetchAllRowsChecked(table, selectCols) {
+            let out = [];
+            let start = 0;
+            const limit = 1000;
+            let hasMore = true;
+            while (hasMore) {
+                const { data, error } = await _supabase.from(table).select(selectCols).range(start, start + limit - 1);
+                if (error) {
+                    throw new Error(`${table}: ${error.message}`);
+                }
+                out = out.concat(data || []);
+                if (!data || data.length < limit) hasMore = false; else start += limit;
+            }
+            return out;
+        }
+
         async function loadTaskConsolidatedSummary() {
             const tbody = document.getElementById('taskSummaryTableBody');
             tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Consolidating task records...</td></tr>`;
 
-            const [storageRows, pickingRows, reservedRows] = await Promise.all([
-                fetchAllRows('task_storage', 'created_on,area'),
-                fetchAllRows('task_picking', 'posting_date,area'),
-                fetchAllRows('task_reserved', 'activity_date,area')
-            ]);
+            let storageRows, pickingRows, reservedRows;
+            try {
+                [storageRows, pickingRows, reservedRows] = await Promise.all([
+                    fetchAllRowsChecked('task_storage', 'created_on,area'),
+                    fetchAllRowsChecked('task_picking', 'posting_date,area'),
+                    fetchAllRowsChecked('task_reserved', 'activity_date,area')
+                ]);
+            } catch (err) {
+                console.error('loadTaskConsolidatedSummary failed:', err);
+                tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load summary: ${escapeHtml(err.message)}</td></tr>`;
+                alert(`❌ Failed to load consolidated summary:\n${err.message}\n\nThis usually means the "area" column doesn't exist yet on one of the task tables.`);
+                return;
+            }
 
             const combined = [
                 ...storageRows.map(r => ({ type: 'storage', dateRaw: r.created_on, area: r.area })),

@@ -701,6 +701,110 @@
                         <div id="taskSaveResult" class="hidden text-xs border rounded-lg p-3 mt-3"></div>
                     </div>
 
+                    <!-- Live Checklist Panel (Printed / Task Done checkboxes) -->
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Live Task Checklist</h2>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Tick Printed / Task Done — the exact date &amp; time is stamped automatically.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button type="button" data-recordtype="storage" class="taskRecordTypeBtn px-4 py-2 text-xs font-bold rounded-lg border transition bg-blue-600 border-blue-600 text-white">📦 Storage</button>
+                            <button type="button" data-recordtype="picking" class="taskRecordTypeBtn px-4 py-2 text-xs font-bold rounded-lg border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">🧾 Picking</button>
+                            <button type="button" data-recordtype="reserved" class="taskRecordTypeBtn px-4 py-2 text-xs font-bold rounded-lg border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">📌 Reserved</button>
+                        </div>
+
+                        <div class="flex flex-wrap items-end gap-2.5 mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Executed By</label>
+                                <input type="text" id="taskRecordExecFilter" placeholder="Search name..." class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Only Unfinished</label>
+                                <select id="taskRecordPendingOnly" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Show All</option>
+                                    <option value="1">Pending Only</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 ml-auto mt-2 md:mt-0">
+                                <button id="taskRecordLoadBtn" class="bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">🔄 Load Records</button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800 max-h-[520px] overflow-y-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="sticky top-0 bg-slate-50 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                    <tr>
+                                        <th class="px-3 py-3.5">Date</th>
+                                        <th class="px-3 py-3.5">Reference / SKU</th>
+                                        <th class="px-3 py-3.5">Executed By</th>
+                                        <th class="px-3 py-3.5 text-center">Printed</th>
+                                        <th class="px-3 py-3.5">Time Printed</th>
+                                        <th class="px-3 py-3.5 text-center">Task Done</th>
+                                        <th class="px-3 py-3.5">Time Task Done</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="taskRecordTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Checkpoint Report Panel (10AM / 3PM / 8PM / 12AM) -->
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Daily Checkpoint Report</h2>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Printed vs Task Done, per Executed By — snapshot at 10AM / 3PM / 8PM / 12AM.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-end gap-2.5 mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div class="flex flex-col">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Report Date</label>
+                                <input type="date" id="taskReportDate" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 ml-auto mt-2 md:mt-0">
+                                <button id="taskReportGenBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">📊 Generate Report</button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                        <th class="px-3 py-3.5 align-bottom" rowspan="2">Executed By</th>
+                                        <th class="px-3 py-2 text-center border-l border-slate-200 dark:border-slate-700" colspan="2">10:00 AM</th>
+                                        <th class="px-3 py-2 text-center border-l border-slate-200 dark:border-slate-700" colspan="2">3:00 PM</th>
+                                        <th class="px-3 py-2 text-center border-l border-slate-200 dark:border-slate-700" colspan="2">8:00 PM</th>
+                                        <th class="px-3 py-2 text-center border-l border-slate-200 dark:border-slate-700" colspan="2">12:00 AM</th>
+                                    </tr>
+                                    <tr class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                        <th class="px-3 py-2 text-right border-l border-slate-200 dark:border-slate-700">Printed</th>
+                                        <th class="px-3 py-2 text-right">Done</th>
+                                        <th class="px-3 py-2 text-right border-l border-slate-200 dark:border-slate-700">Printed</th>
+                                        <th class="px-3 py-2 text-right">Done</th>
+                                        <th class="px-3 py-2 text-right border-l border-slate-200 dark:border-slate-700">Printed</th>
+                                        <th class="px-3 py-2 text-right">Done</th>
+                                        <th class="px-3 py-2 text-right border-l border-slate-200 dark:border-slate-700">Printed</th>
+                                        <th class="px-3 py-2 text-right">Done</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="taskReportTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="9" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Select a date and click "Generate Report".</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-3 font-semibold">Each checkpoint counts records whose Time Printed / Time Task Done falls on the report date, at or before that checkpoint. 12:00 AM reflects the full day total.</p>
+                    </div>
+
                     <!-- Consolidated Summary Panel -->
                     <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
                         <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
@@ -2963,6 +3067,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 table: 'task_storage',
                 label: 'Storage',
                 dateHeader: 'Created On',
+                dateField: 'created_on',
+                identifierField: 'product',
                 columns: ['created_on','w_order','area','storage','product','product_short_desc','batch','qty','um','username','picking','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['Created On','W. ORDER','AREA','STORAGE','Product','Product Short Description','Batch','QTY','UM','USERNAME','PICKING','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             },
@@ -2970,6 +3076,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 table: 'task_picking',
                 label: 'Picking',
                 dateHeader: 'Posting Date',
+                dateField: 'posting_date',
+                identifierField: 'material',
                 columns: ['posting_date','pick_time','material_doc','material','description','destination','mvt','qty','um','batch','username','printed','time_printed','task','time_task_done','column1','executed_by'],
                 headers: ['Posting Date','Time','Material Doc','Material','Description','DESTINATION','MVT','QTY','UM','BATCH','UserName','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','Column1','EXECUTED BY']
             },
@@ -2977,6 +3085,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 table: 'task_reserved',
                 label: 'Reserved',
                 dateHeader: 'Date',
+                dateField: 'activity_date',
+                identifierField: 'sku',
                 columns: ['activity_date','so_number','obd_no','rdd','customer','sku','qty','latest_served','w_o','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['DATE','S.O','OBD NO.','RDD','CUSTOMER','SKU','QTY','LATEST SERVED','W.O','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             }
@@ -2984,6 +3094,15 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         let taskActiveType = 'storage';
         let taskParsedRows = null;
+        let taskRecordActiveType = 'storage';
+        let taskRecordRows = [];
+
+        // "YYYY-MM-DD HH:mm:ss" in local time — sortable & easily re-parsed.
+        function nowStampLocal() {
+            const d = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
 
         function normalizeDateKey(str) {
             const d = parseAnyDate(str);
@@ -3149,6 +3268,229 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 document.getElementById('taskSummaryDateTo').value = '';
                 loadTaskConsolidatedSummary();
             });
+
+            // --- Live Checklist wiring ---
+            const recordTypeButtons = document.querySelectorAll('.taskRecordTypeBtn');
+            recordTypeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    taskRecordActiveType = btn.dataset.recordtype;
+                    recordTypeButtons.forEach(b => {
+                        b.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');
+                        b.classList.add('border-slate-200', 'dark:border-slate-700', 'text-slate-600', 'dark:text-slate-300');
+                    });
+                    btn.classList.add('bg-blue-600', 'border-blue-600', 'text-white');
+                    btn.classList.remove('border-slate-200', 'dark:border-slate-700', 'text-slate-600', 'dark:text-slate-300');
+                    loadTaskRecordChecklist();
+                });
+            });
+            document.getElementById('taskRecordLoadBtn').addEventListener('click', loadTaskRecordChecklist);
+            document.getElementById('taskRecordExecFilter').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') loadTaskRecordChecklist();
+            });
+            document.getElementById('taskRecordPendingOnly').addEventListener('change', loadTaskRecordChecklist);
+
+            // --- Checkpoint Report wiring ---
+            const reportDateInput = document.getElementById('taskReportDate');
+            const today = new Date();
+            reportDateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            document.getElementById('taskReportGenBtn').addEventListener('click', generateCheckpointReport);
+        }
+
+        // ============================================================
+        // LIVE CHECKLIST — Printed / Task Done checkboxes
+        // ============================================================
+        async function loadTaskRecordChecklist() {
+            const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
+            const tbody = document.getElementById('taskRecordTableBody');
+            tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
+
+            const selectCols = `id,${cfg.dateField},${cfg.identifierField},executed_by,printed,time_printed,task,time_task_done`;
+            let rows = await fetchAllRows(cfg.table, selectCols);
+
+            const execFilter = (document.getElementById('taskRecordExecFilter').value || '').trim().toUpperCase();
+            const pendingOnly = document.getElementById('taskRecordPendingOnly').value === '1';
+
+            if (execFilter) {
+                rows = rows.filter(r => (r.executed_by || '').toUpperCase().includes(execFilter));
+            }
+            if (pendingOnly) {
+                rows = rows.filter(r => !isChecked(r.printed) || !isChecked(r.task));
+            }
+
+            // Most recent first (by id, since date text formats vary)
+            rows.sort((a, b) => b.id - a.id);
+
+            taskRecordRows = rows;
+            renderTaskRecordChecklist(cfg, rows);
+        }
+
+        function isChecked(val) {
+            if (val === null || val === undefined) return false;
+            const s = String(val).trim().toUpperCase();
+            return s === 'YES' || s === 'TRUE' || s === '1' || s === 'Y' || s === 'X' || s === 'DONE' || s === 'PRINTED';
+        }
+
+        function renderTaskRecordChecklist(cfg, rows) {
+            const tbody = document.getElementById('taskRecordTableBody');
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(r => {
+                const printedChecked = isChecked(r.printed);
+                const taskChecked = isChecked(r.task);
+                return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-row-id="${r.id}">
+                    <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${escapeHtml(r[cfg.dateField])}</td>
+                    <td class="px-3 py-2.5">${escapeHtml(r[cfg.identifierField])}</td>
+                    <td class="px-3 py-2.5 font-bold">${escapeHtml(r.executed_by)}</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <input type="checkbox" class="taskPrintedCheckbox w-4 h-4 accent-blue-600 cursor-pointer" data-id="${r.id}" ${printedChecked ? 'checked' : ''}>
+                    </td>
+                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 timePrintedCell whitespace-nowrap">${escapeHtml(r.time_printed)}</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <input type="checkbox" class="taskDoneCheckbox w-4 h-4 accent-emerald-600 cursor-pointer" data-id="${r.id}" ${taskChecked ? 'checked' : ''}>
+                    </td>
+                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 timeTaskDoneCell whitespace-nowrap">${escapeHtml(r.time_task_done)}</td>
+                </tr>`;
+            }).join('');
+
+            tbody.querySelectorAll('.taskPrintedCheckbox').forEach(cb => {
+                cb.addEventListener('change', (e) => handleTaskCheckboxToggle(e.target, 'printed', 'time_printed', 'timePrintedCell'));
+            });
+            tbody.querySelectorAll('.taskDoneCheckbox').forEach(cb => {
+                cb.addEventListener('change', (e) => handleTaskCheckboxToggle(e.target, 'task', 'time_task_done', 'timeTaskDoneCell'));
+            });
+        }
+
+        async function handleTaskCheckboxToggle(checkbox, statusField, timeField, timeCellClass) {
+            const id = parseInt(checkbox.dataset.id, 10);
+            const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
+            const isNowChecked = checkbox.checked;
+            const stamp = isNowChecked ? nowStampLocal() : null;
+
+            checkbox.disabled = true;
+            const payload = { [statusField]: isNowChecked ? 'YES' : null, [timeField]: stamp };
+
+            const { error } = await _supabase.from(cfg.table).update(payload).eq('id', id);
+            checkbox.disabled = false;
+
+            if (error) {
+                alert(`❌ Failed to update record: ${error.message}`);
+                checkbox.checked = !isNowChecked;
+                return;
+            }
+
+            const row = tbodyRowFor(id);
+            if (row) {
+                const cell = row.querySelector('.' + timeCellClass);
+                if (cell) cell.textContent = stamp || '';
+            }
+            const local = taskRecordRows.find(r => r.id === id);
+            if (local) {
+                local[statusField] = payload[statusField];
+                local[timeField] = payload[timeField];
+            }
+        }
+
+        function tbodyRowFor(id) {
+            return document.querySelector(`#taskRecordTableBody tr[data-row-id="${id}"]`);
+        }
+
+        // ============================================================
+        // DAILY CHECKPOINT REPORT (10AM / 3PM / 8PM / 12AM)
+        // ============================================================
+        const REPORT_CHECKPOINTS = [
+            { label: '10:00 AM', hour: 10, minute: 0 },
+            { label: '3:00 PM',  hour: 15, minute: 0 },
+            { label: '8:00 PM',  hour: 20, minute: 0 },
+            { label: '12:00 AM', hour: 24, minute: 0 }   // full-day cutoff (midnight rollover)
+        ];
+
+        // Parses "YYYY-MM-DD HH:mm:ss" (our own stamps) or falls back to parseAnyDate
+        // for legacy pasted values. Returns a Date, or null if unparseable.
+        function parseStampDate(str) {
+            if (!str) return null;
+            const s = String(str).trim();
+            const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+            if (m) {
+                return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5]), m[6] ? parseInt(m[6]) : 0);
+            }
+            const d = parseAnyDate(s);
+            return (d && !isNaN(d.getTime())) ? d : null;
+        }
+
+        async function generateCheckpointReport() {
+            const tbody = document.getElementById('taskReportTableBody');
+            const reportDateStr = document.getElementById('taskReportDate').value;
+            if (!reportDateStr) { alert('Please select a report date.'); return; }
+
+            tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Building checkpoint report...</td></tr>`;
+
+            const [storageRows, pickingRows, reservedRows] = await Promise.all([
+                fetchAllRows('task_storage', 'executed_by,printed,time_printed,task,time_task_done'),
+                fetchAllRows('task_picking', 'executed_by,printed,time_printed,task,time_task_done'),
+                fetchAllRows('task_reserved', 'executed_by,printed,time_printed,task,time_task_done')
+            ]);
+            const combined = [...storageRows, ...pickingRows, ...reservedRows];
+
+            const [ry, rm, rd] = reportDateStr.split('-').map(n => parseInt(n, 10));
+
+            // Build per-executed-by tallies across the 4 checkpoints
+            const execMap = {};
+            function ensureExec(name) {
+                if (!execMap[name]) {
+                    execMap[name] = REPORT_CHECKPOINTS.map(() => ({ printed: 0, done: 0 }));
+                }
+                return execMap[name];
+            }
+
+            combined.forEach(r => {
+                const executedBy = (r.executed_by || 'UNASSIGNED').trim() || 'UNASSIGNED';
+                const printedDate = isChecked(r.printed) ? parseStampDate(r.time_printed) : null;
+                const doneDate = isChecked(r.task) ? parseStampDate(r.time_task_done) : null;
+
+                if (printedDate && sameCalendarDay(printedDate, ry, rm, rd)) {
+                    const tallies = ensureExec(executedBy);
+                    REPORT_CHECKPOINTS.forEach((cp, i) => {
+                        if (beforeCheckpoint(printedDate, ry, rm, rd, cp)) tallies[i].printed++;
+                    });
+                }
+                if (doneDate && sameCalendarDay(doneDate, ry, rm, rd)) {
+                    const tallies = ensureExec(executedBy);
+                    REPORT_CHECKPOINTS.forEach((cp, i) => {
+                        if (beforeCheckpoint(doneDate, ry, rm, rd, cp)) tallies[i].done++;
+                    });
+                }
+            });
+
+            const execNames = Object.keys(execMap).sort((a, b) => a.localeCompare(b));
+
+            if (execNames.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No Printed/Task-Done activity recorded for ${escapeHtml(reportDateStr)}.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = execNames.map(name => {
+                const cells = execMap[name].map(t =>
+                    `<td class="px-3 py-2.5 text-right border-l border-slate-100 dark:border-slate-800">${t.printed}</td><td class="px-3 py-2.5 text-right">${t.done}</td>`
+                ).join('');
+                return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td class="px-3 py-2.5 font-bold">${escapeHtml(name)}</td>
+                    ${cells}
+                </tr>`;
+            }).join('');
+        }
+
+        function sameCalendarDay(date, y, m, d) {
+            return date.getFullYear() === y && (date.getMonth() + 1) === m && date.getDate() === d;
+        }
+
+        function beforeCheckpoint(date, y, m, d, checkpoint) {
+            const cutoff = checkpoint.hour === 24
+                ? new Date(y, m - 1, d + 1, 0, 0, 0)   // midnight rollover = full day
+                : new Date(y, m - 1, d, checkpoint.hour, checkpoint.minute, 0);
+            return date <= cutoff;
         }
 
         async function fetchAllRows(table, selectCols) {

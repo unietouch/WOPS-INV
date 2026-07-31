@@ -3913,7 +3913,10 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('taskRecordTableBody').addEventListener('click', (e) => {
                 const btn = e.target.closest('.taskTimeEditBtn');
                 if (!btn) return;
-                if (!isAdminUser()) return;
+                if (!isAdminUser()) {
+                    alert('⚠️ Only the admin account can edit timestamps.');
+                    return;
+                }
                 openTaskTimeEditModal(
                     [btn.dataset.id],
                     btn.dataset.statusField,
@@ -3925,11 +3928,13 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             // Admin-only mass timestamp edit — applies the same date & time to every
             // currently selected row's Printed or Task Done checkpoint.
             document.getElementById('taskMassSetPrintedTimeBtn').addEventListener('click', () => {
-                if (!isAdminUser() || taskSelectedIds.size === 0) return;
+                if (!isAdminUser()) { alert('⚠️ Only the admin account can edit timestamps.'); return; }
+                if (taskSelectedIds.size === 0) { alert('⚠️ Select at least one row first.'); return; }
                 openTaskTimeEditModal(Array.from(taskSelectedIds), 'printed', 'time_printed', 'timePrintedCell');
             });
             document.getElementById('taskMassSetDoneTimeBtn').addEventListener('click', () => {
-                if (!isAdminUser() || taskSelectedIds.size === 0) return;
+                if (!isAdminUser()) { alert('⚠️ Only the admin account can edit timestamps.'); return; }
+                if (taskSelectedIds.size === 0) { alert('⚠️ Select at least one row first.'); return; }
                 openTaskTimeEditModal(Array.from(taskSelectedIds), 'task', 'time_task_done', 'timeTaskDoneCell');
             });
         }

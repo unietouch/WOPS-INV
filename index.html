@@ -26,6 +26,13 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* Admin-only timestamp edit pencils in the Live Task Checklist */
+        .taskTimeEditBtn {
+            display: none;
+        }
+        #taskRecordTableBody.admin-edit-mode .taskTimeEditBtn {
+            display: inline;
+        }
         /* Smooth collapsing transitions */
         .sidebar-transition {
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3092,6 +3099,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 dateHeader: 'Created On',
                 dateField: 'created_on',
                 identifierField: 'product',
+                descField: 'product_short_desc',
                 columns: ['created_on','w_order','area','storage','product','product_short_desc','batch','qty','um','username','picking','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['Created On','W. ORDER','AREA','STORAGE','Product','Product Short Description','Batch','QTY','UM','USERNAME','PICKING','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             },
@@ -3101,6 +3109,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 dateHeader: 'Posting Date',
                 dateField: 'posting_date',
                 identifierField: 'material',
+                descField: 'description',
                 columns: ['posting_date','pick_time','material_doc','material','description','destination','mvt','qty','um','batch','username','printed','time_printed','task','time_task_done','column1','executed_by'],
                 headers: ['Posting Date','Time','Material Doc','Material','Description','DESTINATION','MVT','QTY','UM','BATCH','UserName','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','Column1','EXECUTED BY']
             },
@@ -3110,6 +3119,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 dateHeader: 'Date',
                 dateField: 'activity_date',
                 identifierField: 'sku',
+                descField: null,
                 columns: ['activity_date','so_number','obd_no','rdd','customer','sku','qty','latest_served','w_o','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['DATE','S.O','OBD NO.','RDD','CUSTOMER','SKU','QTY','LATEST SERVED','W.O','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             }
@@ -3327,7 +3337,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             const tbody = document.getElementById('taskRecordTableBody');
             tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
 
-            const selectCols = `id,${cfg.dateField},${cfg.identifierField},executed_by,printed,time_printed,task,time_task_done`;
+            const selectCols = `id,${cfg.dateField},${cfg.identifierField}${cfg.descField ? ',' + cfg.descField : ''},executed_by,printed,time_printed,task,time_task_done`;
             let rows = await fetchAllRows(cfg.table, selectCols);
 
             const execFilter = (document.getElementById('taskRecordExecFilter').value || '').trim().toUpperCase();
@@ -3363,23 +3373,28 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             tbody.innerHTML = rows.map(r => {
                 const printedChecked = isChecked(r.printed);
                 const taskChecked = isChecked(r.task);
+                const identifier = escapeHtml(r[cfg.identifierField]);
+                const desc = cfg.descField ? (r[cfg.descField] || '').toString().trim() : '';
+                const identifierHtml = desc
+                    ? `${identifier} <span class="text-slate-400 dark:text-slate-500 font-normal">— ${escapeHtml(desc)}</span>`
+                    : identifier;
                 return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-row-id="${r.id}">
                     <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${escapeHtml(r[cfg.dateField])}</td>
-                    <td class="px-3 py-2.5">${escapeHtml(r[cfg.identifierField])}</td>
+                    <td class="px-3 py-2.5">${identifierHtml}</td>
                     <td class="px-3 py-2.5 font-bold">${escapeHtml(r.executed_by)}</td>
                     <td class="px-3 py-2.5 text-center">
                         <input type="checkbox" class="taskPrintedCheckbox w-4 h-4 accent-blue-600 cursor-pointer" data-id="${r.id}" ${printedChecked ? 'checked' : ''}>
                     </td>
                     <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         <span class="timePrintedCell">${escapeHtml(r.time_printed)}</span>
-                        <button type="button" class="taskTimeEditBtn hidden ml-1.5 text-[10px] text-blue-500 hover:text-blue-700 align-middle" data-id="${r.id}" data-status-field="printed" data-time-field="time_printed" data-time-cell="timePrintedCell" title="Admin: edit timestamp">✏️</button>
+                        <button type="button" class="taskTimeEditBtn ml-1.5 text-[10px] text-blue-500 hover:text-blue-700 align-middle" data-id="${r.id}" data-status-field="printed" data-time-field="time_printed" data-time-cell="timePrintedCell" title="Admin: edit timestamp">✏️</button>
                     </td>
                     <td class="px-3 py-2.5 text-center">
                         <input type="checkbox" class="taskDoneCheckbox w-4 h-4 accent-emerald-600 cursor-pointer" data-id="${r.id}" ${taskChecked ? 'checked' : ''}>
                     </td>
                     <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         <span class="timeTaskDoneCell">${escapeHtml(r.time_task_done)}</span>
-                        <button type="button" class="taskTimeEditBtn hidden ml-1.5 text-[10px] text-blue-500 hover:text-blue-700 align-middle" data-id="${r.id}" data-status-field="task" data-time-field="time_task_done" data-time-cell="timeTaskDoneCell" title="Admin: edit timestamp">✏️</button>
+                        <button type="button" class="taskTimeEditBtn ml-1.5 text-[10px] text-blue-500 hover:text-blue-700 align-middle" data-id="${r.id}" data-status-field="task" data-time-field="time_task_done" data-time-cell="timeTaskDoneCell" title="Admin: edit timestamp">✏️</button>
                     </td>
                 </tr>`;
             }).join('');
@@ -3390,16 +3405,10 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             tbody.querySelectorAll('.taskDoneCheckbox').forEach(cb => {
                 cb.addEventListener('change', (e) => handleTaskCheckboxToggle(e.target, 'task', 'time_task_done', 'timeTaskDoneCell'));
             });
-            const adminMode = isAdminUser();
-            tbody.querySelectorAll('.taskTimeEditBtn').forEach(btn => {
-                btn.classList.toggle('hidden', !adminMode);
-                btn.addEventListener('click', (e) => openTaskTimeEditModal(
-                    e.currentTarget.dataset.id,
-                    e.currentTarget.dataset.statusField,
-                    e.currentTarget.dataset.timeField,
-                    e.currentTarget.dataset.timeCell
-                ));
-            });
+
+            // Admin-only visibility for the timestamp-edit pencils (delegated click handler is
+            // wired once in setupTaskTimeEditModal(), so we only need to show/hide here).
+            tbody.classList.toggle('admin-edit-mode', isAdminUser());
         }
 
         async function handleTaskCheckboxToggle(checkbox, statusField, timeField, timeCellClass) {
@@ -3459,18 +3468,23 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         }
 
         function openTaskTimeEditModal(id, statusField, timeField, timeCellClass) {
-            if (!isAdminUser()) return;
-            taskTimeEditCtx = { id: parseInt(id, 10), statusField, timeField, timeCellClass };
-            const local = taskRecordRows.find(r => r.id === taskTimeEditCtx.id);
-            const currentStamp = local ? local[timeField] : '';
+            try {
+                if (!isAdminUser()) return;
+                taskTimeEditCtx = { id: parseInt(id, 10), statusField, timeField, timeCellClass };
+                const local = taskRecordRows.find(r => r.id === taskTimeEditCtx.id);
+                const currentStamp = local ? local[timeField] : '';
 
-            document.getElementById('taskTimeEditModalTitle').textContent =
-                `🛠️ Edit ${timeField === 'time_printed' ? 'Time Printed' : 'Time Task Done'}`;
-            document.getElementById('taskTimeEditInput').value = stampToDatetimeLocal(currentStamp);
+                document.getElementById('taskTimeEditModalTitle').textContent =
+                    `🛠️ Edit ${timeField === 'time_printed' ? 'Time Printed' : 'Time Task Done'}`;
+                document.getElementById('taskTimeEditInput').value = stampToDatetimeLocal(currentStamp);
 
-            const modal = document.getElementById('taskTimeEditModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+                const modal = document.getElementById('taskTimeEditModal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } catch (err) {
+                console.error('openTaskTimeEditModal failed:', err);
+                alert('❌ Could not open the timestamp editor: ' + (err.message || err));
+            }
         }
 
         function closeTaskTimeEditModal() {
@@ -3492,6 +3506,10 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 alert('❌ Please enter a valid date & time.');
                 return;
             }
+            if (!clear && !rawVal) {
+                alert('❌ Please choose a date & time, or use Clear to remove the stamp.');
+                return;
+            }
 
             const payload = { [timeField]: stamp, [statusField]: stamp ? 'YES' : null };
 
@@ -3500,31 +3518,37 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             saveBtn.disabled = true;
             clearBtn.disabled = true;
 
-            const { error } = await _supabase.from(cfg.table).update(payload).eq('id', id);
+            try {
+                const { error } = await _supabase.from(cfg.table).update(payload).eq('id', id);
 
-            saveBtn.disabled = false;
-            clearBtn.disabled = false;
+                if (error) {
+                    console.error('saveTaskTimeEdit update error:', error);
+                    alert(`❌ Failed to update timestamp: ${error.message}`);
+                    return;
+                }
 
-            if (error) {
-                alert(`❌ Failed to update timestamp: ${error.message}`);
-                return;
+                const row = tbodyRowFor(id);
+                if (row) {
+                    const cell = row.querySelector('.' + timeCellClass);
+                    if (cell) cell.textContent = stamp || '';
+                    const checkboxSelector = statusField === 'printed' ? '.taskPrintedCheckbox' : '.taskDoneCheckbox';
+                    const checkbox = row.querySelector(checkboxSelector);
+                    if (checkbox) checkbox.checked = !!stamp;
+                }
+                const local = taskRecordRows.find(r => r.id === id);
+                if (local) {
+                    local[statusField] = payload[statusField];
+                    local[timeField] = payload[timeField];
+                }
+
+                closeTaskTimeEditModal();
+            } catch (err) {
+                console.error('saveTaskTimeEdit failed:', err);
+                alert('❌ Unexpected error while saving: ' + (err.message || err));
+            } finally {
+                saveBtn.disabled = false;
+                clearBtn.disabled = false;
             }
-
-            const row = tbodyRowFor(id);
-            if (row) {
-                const cell = row.querySelector('.' + timeCellClass);
-                if (cell) cell.textContent = stamp || '';
-                const checkboxSelector = statusField === 'printed' ? '.taskPrintedCheckbox' : '.taskDoneCheckbox';
-                const checkbox = row.querySelector(checkboxSelector);
-                if (checkbox) checkbox.checked = !!stamp;
-            }
-            const local = taskRecordRows.find(r => r.id === id);
-            if (local) {
-                local[statusField] = payload[statusField];
-                local[timeField] = payload[timeField];
-            }
-
-            closeTaskTimeEditModal();
         }
 
         function setupTaskTimeEditModal() {
@@ -3534,6 +3558,20 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('taskTimeEditClearBtn').addEventListener('click', () => saveTaskTimeEdit(true));
             document.getElementById('taskTimeEditModal').addEventListener('click', (e) => {
                 if (e.target.id === 'taskTimeEditModal') closeTaskTimeEditModal();
+            });
+
+            // Delegated listener on the tbody itself (attached once, survives every re-render
+            // of the checklist since renderTaskRecordChecklist() only replaces innerHTML).
+            document.getElementById('taskRecordTableBody').addEventListener('click', (e) => {
+                const btn = e.target.closest('.taskTimeEditBtn');
+                if (!btn) return;
+                if (!isAdminUser()) return;
+                openTaskTimeEditModal(
+                    btn.dataset.id,
+                    btn.dataset.statusField,
+                    btn.dataset.timeField,
+                    btn.dataset.timeCell
+                );
             });
         }
 

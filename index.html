@@ -33,6 +33,13 @@
         #taskRecordTableBody.admin-edit-mode .taskTimeEditBtn {
             display: inline;
         }
+        /* Admin-only "edit full row" button in the Live Task Checklist */
+        .taskRowEditBtn {
+            display: none;
+        }
+        #taskRecordTableBody.admin-edit-mode .taskRowEditBtn {
+            display: inline-flex;
+        }
         /* Smooth collapsing transitions */
         .sidebar-transition {
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -595,6 +602,22 @@
                         </div>
                     </div>
 
+                    <!-- Task Full Record Edit Modal [Admin Only] -->
+                    <div id="taskRowEditModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+                            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                                <h3 id="taskRowEditModalTitle" class="text-sm font-bold text-slate-900 dark:text-white">🛠️ Edit Record</h3>
+                                <button id="taskRowEditModalCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
+                            </div>
+                            <p class="px-5 pt-3 text-[11px] text-slate-400 dark:text-slate-500">Admin override — every field on this record can be corrected here, including the Date, Time Printed and Time Task Done.</p>
+                            <div id="taskRowEditFields" class="p-5 space-y-3 overflow-y-auto"></div>
+                            <div class="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                                <button id="taskRowEditCancelBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg transition">Cancel</button>
+                                <button id="taskRowEditSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 3B: Open Active Gaps Summary Panel -->
                     <div id="reportSectionGaps" class="hidden bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <div class="mb-4">
@@ -795,6 +818,7 @@
                                 <thead class="sticky top-0 bg-slate-50 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
                                     <tr>
                                         <th class="px-3 py-3.5 w-8"><input type="checkbox" id="taskRecordSelectAll" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer"></th>
+                                        <th class="px-3 py-3.5 w-8">Edit</th>
                                         <th class="px-3 py-3.5">Date</th>
                                         <th class="px-3 py-3.5">Reference / SKU</th>
                                         <th class="px-3 py-3.5">Storage</th>
@@ -802,14 +826,15 @@
                                         <th class="px-3 py-3.5 text-right">Qty</th>
                                         <th class="px-3 py-3.5">Area</th>
                                         <th class="px-3 py-3.5 text-center">Printed</th>
-                                        <th class="px-3 py-3.5">Time Printed</th>
                                         <th class="px-3 py-3.5 text-center">Task Done</th>
+                                        <th class="px-3 py-3.5">Executed By</th>
+                                        <th class="px-3 py-3.5">Time Printed</th>
                                         <th class="px-3 py-3.5">Time Task Done</th>
                                     </tr>
                                 </thead>
                                 <tbody id="taskRecordTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                                     <tr>
-                                        <td colspan="11" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
+                                        <td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1301,7 +1326,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 ['setupFefoFilters', setupFefoFilters],
                 ['setupFefoReasonManagerUI', setupFefoReasonManagerUI],
                 ['setupTaskLogModule', setupTaskLogModule],
-                ['setupTaskTimeEditModal', setupTaskTimeEditModal]
+                ['setupTaskTimeEditModal', setupTaskTimeEditModal],
+                ['setupTaskRowEditModal', setupTaskRowEditModal]
             ];
             for (const [name, fn] of steps) {
                 try {
@@ -3542,15 +3568,15 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         async function loadTaskRecordChecklist() {
             const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
             const tbody = document.getElementById('taskRecordTableBody');
-            tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
 
-            const selectCols = `id,${cfg.dateField},${cfg.identifierField}${cfg.descField ? ',' + cfg.descField : ''}${cfg.storageField ? ',' + cfg.storageField : ''}${cfg.batchField ? ',' + cfg.batchField : ''}${cfg.qtyField ? ',' + cfg.qtyField : ''},${cfg.areaField},printed,time_printed,task,time_task_done`;
+            const selectCols = `id,${cfg.columns.join(',')}`;
             let rows;
             try {
                 rows = await fetchAllRowsChecked(cfg.table, selectCols);
             } catch (err) {
                 console.error('loadTaskRecordChecklist failed:', err);
-                tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
                 alert(`❌ Failed to load ${cfg.label} records:\n${err.message}\n\nThis usually means the "${cfg.areaField}" (or another selected) column doesn't exist yet on the "${cfg.table}" table.`);
                 return;
             }
@@ -3605,7 +3631,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             if (selectAllCb) selectAllCb.checked = false;
 
             if (!rows || rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
                 return;
             }
 
@@ -3619,9 +3645,13 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 const identifierHtml = desc
                     ? `${identifier} <span class="text-slate-400 dark:text-slate-500 font-normal">— ${escapeHtml(desc)}</span>`
                     : identifier;
+                const executedByVal = escapeHtml(r.executed_by);
                 return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-row-id="${r.id}">
                     <td class="px-3 py-2.5">
                         <input type="checkbox" class="taskRowSelectCheckbox w-3.5 h-3.5 accent-blue-600 cursor-pointer" data-id="${r.id}">
+                    </td>
+                    <td class="px-3 py-2.5">
+                        <button type="button" class="taskRowEditBtn text-[11px] text-blue-500 hover:text-blue-700" data-id="${r.id}" title="Admin: edit full record">✏️</button>
                     </td>
                     <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${escapeHtml(r[cfg.dateField])}</td>
                     <td class="px-3 py-2.5">${identifierHtml}</td>
@@ -3632,16 +3662,17 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     <td class="px-3 py-2.5 text-center">
                         <input type="checkbox" class="taskPrintedCheckbox w-4 h-4 accent-blue-600 ${printedLocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}" data-id="${r.id}" ${printedChecked ? 'checked' : ''} ${printedLocked ? 'disabled title="Only Task Done can be changed by this account"' : ''}>
                     </td>
-                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        <span class="timePrintedCell">${escapeHtml(r.time_printed)}</span>
-                        <button type="button" class="taskTimeEditBtn ml-1.5 text-[10px] text-blue-500 hover:text-blue-700 align-middle" data-id="${r.id}" data-status-field="printed" data-time-field="time_printed" data-time-cell="timePrintedCell" title="Admin: edit timestamp">✏️</button>
-                    </td>
                     <td class="px-3 py-2.5 text-center">
                         <input type="checkbox" class="taskDoneCheckbox w-4 h-4 accent-emerald-600 cursor-pointer" data-id="${r.id}" ${taskChecked ? 'checked' : ''}>
                     </td>
+                    <td class="px-3 py-2.5">
+                        <input type="text" class="taskExecutedByInput w-28 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 focus:border-blue-400 bg-transparent focus:bg-white dark:focus:bg-slate-800 text-xs rounded px-1.5 py-1 text-slate-700 dark:text-slate-300 focus:outline-none" data-id="${r.id}" value="${executedByVal}" placeholder="Name" title="Enter who executed this task">
+                    </td>
+                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        <span class="timePrintedCell">${escapeHtml(r.time_printed)}</span>
+                    </td>
                     <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         <span class="timeTaskDoneCell">${escapeHtml(r.time_task_done)}</span>
-                        <button type="button" class="taskTimeEditBtn ml-1.5 text-[10px] text-blue-500 hover:text-blue-700 align-middle" data-id="${r.id}" data-status-field="task" data-time-field="time_task_done" data-time-cell="timeTaskDoneCell" title="Admin: edit timestamp">✏️</button>
                     </td>
                 </tr>`;
             }).join('');
@@ -3651,6 +3682,10 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             });
             tbody.querySelectorAll('.taskDoneCheckbox').forEach(cb => {
                 cb.addEventListener('change', (e) => handleTaskCheckboxToggle(e.target, 'task', 'time_task_done', 'timeTaskDoneCell'));
+            });
+            tbody.querySelectorAll('.taskExecutedByInput').forEach(inp => {
+                inp.addEventListener('change', (e) => handleExecutedByChange(e.target));
+                inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
             });
             tbody.querySelectorAll('.taskRowSelectCheckbox').forEach(cb => {
                 cb.addEventListener('change', (e) => {
@@ -3776,6 +3811,28 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         function tbodyRowFor(id) {
             return document.querySelector(`#taskRecordTableBody tr[data-row-id="${id}"]`);
+        }
+
+        // "Executed By" is a free-text field any user can fill in per row (who physically
+        // carried out the task). Saved on blur / Enter — no admin restriction.
+        async function handleExecutedByChange(input) {
+            const id = parseInt(input.dataset.id, 10);
+            const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
+            const newVal = input.value.trim();
+
+            const local = taskRecordRows.find(r => r.id === id);
+            if (local && (local.executed_by || '') === newVal) return; // no change, skip write
+
+            input.disabled = true;
+            const { error } = await _supabase.from(cfg.table).update({ executed_by: newVal || null }).eq('id', id);
+            input.disabled = false;
+
+            if (error) {
+                alert(`❌ Failed to save Executed By: ${error.message}`);
+                if (local) input.value = local.executed_by || '';
+                return;
+            }
+            if (local) local.executed_by = newVal || null;
         }
 
         // ============================================================
@@ -3936,6 +3993,136 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 if (!isAdminUser()) { alert('⚠️ Only the admin account can edit timestamps.'); return; }
                 if (taskSelectedIds.size === 0) { alert('⚠️ Select at least one row first.'); return; }
                 openTaskTimeEditModal(Array.from(taskSelectedIds), 'task', 'time_task_done', 'timeTaskDoneCell');
+            });
+        }
+
+        // ============================================================
+        // ADMIN: Full Record Edit — every column, including Date,
+        // Time Printed and Time Task Done, in one modal.
+        // ============================================================
+        let taskRowEditCtx = null; // { id }
+
+        // Decide label + input type for a given column key.
+        function taskFieldMeta(cfg, col) {
+            const idx = cfg.columns.indexOf(col);
+            const label = idx >= 0 ? cfg.headers[idx] : col;
+            if (col === 'time_printed' || col === 'time_task_done') return { label, type: 'datetime' };
+            if (col === 'printed' || col === 'task') return { label, type: 'status' };
+            if (cfg.qtyField && col === cfg.qtyField) return { label, type: 'number' };
+            return { label, type: 'text' };
+        }
+
+        function openTaskRowEditModal(id) {
+            try {
+                if (!isAdminUser()) return;
+                const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
+                const row = taskRecordRows.find(r => r.id === id);
+                if (!row) { alert('❌ Could not find that record — try reloading the checklist.'); return; }
+
+                taskRowEditCtx = { id };
+                document.getElementById('taskRowEditModalTitle').textContent = `🛠️ Edit Record — ${cfg.label} #${id}`;
+
+                const container = document.getElementById('taskRowEditFields');
+                container.innerHTML = cfg.columns.map(col => {
+                    const { label, type } = taskFieldMeta(cfg, col);
+                    const raw = row[col];
+                    let inputHtml;
+                    if (type === 'datetime') {
+                        inputHtml = `<input type="datetime-local" step="1" data-col="${col}" data-type="datetime" class="taskRowEditField w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" value="${stampToDatetimeLocal(raw)}">`;
+                    } else if (type === 'status') {
+                        const checked = isChecked(raw);
+                        inputHtml = `<select data-col="${col}" data-type="status" class="taskRowEditField w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="" ${!checked ? 'selected' : ''}>Not set</option>
+                            <option value="YES" ${checked ? 'selected' : ''}>YES</option>
+                        </select>`;
+                    } else if (type === 'number') {
+                        inputHtml = `<input type="number" step="any" data-col="${col}" data-type="number" class="taskRowEditField w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" value="${escapeHtml(raw === null || raw === undefined ? '' : raw)}">`;
+                    } else {
+                        inputHtml = `<input type="text" data-col="${col}" data-type="text" class="taskRowEditField w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" value="${escapeHtml(raw)}">`;
+                    }
+                    return `<div>
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">${escapeHtml(label)}</label>
+                        ${inputHtml}
+                    </div>`;
+                }).join('');
+
+                const modal = document.getElementById('taskRowEditModal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } catch (err) {
+                console.error('openTaskRowEditModal failed:', err);
+                alert('❌ Could not open the record editor: ' + (err.message || err));
+            }
+        }
+
+        function closeTaskRowEditModal() {
+            const modal = document.getElementById('taskRowEditModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            taskRowEditCtx = null;
+        }
+
+        async function saveTaskRowEdit() {
+            if (!taskRowEditCtx) return;
+            const { id } = taskRowEditCtx;
+            const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
+
+            const payload = {};
+            let invalid = null;
+            document.querySelectorAll('#taskRowEditFields .taskRowEditField').forEach(field => {
+                const col = field.dataset.col;
+                const type = field.dataset.type;
+                const val = field.value;
+                if (type === 'datetime') {
+                    payload[col] = val ? datetimeLocalToStamp(val) : null;
+                } else if (type === 'status') {
+                    payload[col] = val || null;
+                } else if (type === 'number') {
+                    if (val.trim() === '') { payload[col] = null; }
+                    else if (isNaN(Number(val))) { invalid = taskFieldMeta(cfg, col).label; }
+                    else { payload[col] = Number(val); }
+                } else {
+                    payload[col] = val.trim() === '' ? null : val.trim();
+                }
+            });
+
+            if (invalid) { alert(`❌ "${invalid}" must be a valid number.`); return; }
+
+            const saveBtn = document.getElementById('taskRowEditSaveBtn');
+            saveBtn.disabled = true;
+            try {
+                const { error } = await _supabase.from(cfg.table).update(payload).eq('id', id);
+                if (error) {
+                    alert(`❌ Failed to save record: ${error.message}`);
+                    return;
+                }
+                closeTaskRowEditModal();
+                await loadTaskRecordChecklist(); // refresh so every dependent view (filters, report) stays in sync
+            } catch (err) {
+                console.error('saveTaskRowEdit failed:', err);
+                alert('❌ Unexpected error while saving: ' + (err.message || err));
+            } finally {
+                saveBtn.disabled = false;
+            }
+        }
+
+        function setupTaskRowEditModal() {
+            document.getElementById('taskRowEditModalCloseBtn').addEventListener('click', closeTaskRowEditModal);
+            document.getElementById('taskRowEditCancelBtn').addEventListener('click', closeTaskRowEditModal);
+            document.getElementById('taskRowEditSaveBtn').addEventListener('click', saveTaskRowEdit);
+            document.getElementById('taskRowEditModal').addEventListener('click', (e) => {
+                if (e.target.id === 'taskRowEditModal') closeTaskRowEditModal();
+            });
+
+            // Delegated listener — survives every re-render of the checklist.
+            document.getElementById('taskRecordTableBody').addEventListener('click', (e) => {
+                const btn = e.target.closest('.taskRowEditBtn');
+                if (!btn) return;
+                if (!isAdminUser()) {
+                    alert('⚠️ Only the admin account can edit full records.');
+                    return;
+                }
+                openTaskRowEditModal(parseInt(btn.dataset.id, 10));
             });
         }
 

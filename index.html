@@ -566,6 +566,28 @@
                         </div>
                     </div>
 
+                    <!-- Task Timestamp Edit Modal [Admin Only] -->
+                    <div id="taskTimeEditModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+                        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-sm">
+                            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                                <h3 id="taskTimeEditModalTitle" class="text-sm font-bold text-slate-900 dark:text-white">🛠️ Edit Timestamp</h3>
+                                <button id="taskTimeEditModalCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
+                            </div>
+                            <div class="p-5 space-y-3">
+                                <p class="text-[11px] text-slate-400 dark:text-slate-500">Admin override — manually set the recorded date &amp; time for this checkpoint. Clearing the field and saving will un-tick the checkbox.</p>
+                                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Date &amp; Time</label>
+                                <input type="datetime-local" id="taskTimeEditInput" step="1" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex justify-between gap-2 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                                <button id="taskTimeEditClearBtn" class="text-red-500 hover:text-red-600 text-xs font-bold px-3 py-2 rounded-lg transition">Clear</button>
+                                <div class="flex gap-2">
+                                    <button id="taskTimeEditCancelBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg transition">Cancel</button>
+                                    <button id="taskTimeEditSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 3B: Open Active Gaps Summary Panel -->
                     <div id="reportSectionGaps" class="hidden bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <div class="mb-4">
@@ -706,7 +728,7 @@
                         <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
                             <div>
                                 <h2 class="text-lg font-bold text-slate-900 dark:text-white">Live Task Checklist</h2>
-                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Tick Printed / Task Done — the exact date &amp; time is stamped automatically.</p>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Tick Printed / Task Done — the exact date &amp; time is stamped automatically. Admins can edit the stamped date/time via the ✏️ icon.</p>
                             </div>
                         </div>
 
@@ -1178,6 +1200,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             setupFefoFilters();
             setupFefoReasonManagerUI();
             setupTaskLogModule();
+            setupTaskTimeEditModal();
 
             await populateLookupData();
             await refreshAllLocalLedgerTables();
@@ -3347,11 +3370,17 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     <td class="px-3 py-2.5 text-center">
                         <input type="checkbox" class="taskPrintedCheckbox w-4 h-4 accent-blue-600 cursor-pointer" data-id="${r.id}" ${printedChecked ? 'checked' : ''}>
                     </td>
-                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 timePrintedCell whitespace-nowrap">${escapeHtml(r.time_printed)}</td>
+                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        <span class="timePrintedCell">${escapeHtml(r.time_printed)}</span>
+                        <button type="button" class="taskTimeEditBtn hidden ml-1.5 text-[10px] text-blue-500 hover:text-blue-700 align-middle" data-id="${r.id}" data-status-field="printed" data-time-field="time_printed" data-time-cell="timePrintedCell" title="Admin: edit timestamp">✏️</button>
+                    </td>
                     <td class="px-3 py-2.5 text-center">
                         <input type="checkbox" class="taskDoneCheckbox w-4 h-4 accent-emerald-600 cursor-pointer" data-id="${r.id}" ${taskChecked ? 'checked' : ''}>
                     </td>
-                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 timeTaskDoneCell whitespace-nowrap">${escapeHtml(r.time_task_done)}</td>
+                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        <span class="timeTaskDoneCell">${escapeHtml(r.time_task_done)}</span>
+                        <button type="button" class="taskTimeEditBtn hidden ml-1.5 text-[10px] text-blue-500 hover:text-blue-700 align-middle" data-id="${r.id}" data-status-field="task" data-time-field="time_task_done" data-time-cell="timeTaskDoneCell" title="Admin: edit timestamp">✏️</button>
+                    </td>
                 </tr>`;
             }).join('');
 
@@ -3360,6 +3389,16 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             });
             tbody.querySelectorAll('.taskDoneCheckbox').forEach(cb => {
                 cb.addEventListener('change', (e) => handleTaskCheckboxToggle(e.target, 'task', 'time_task_done', 'timeTaskDoneCell'));
+            });
+            const adminMode = isAdminUser();
+            tbody.querySelectorAll('.taskTimeEditBtn').forEach(btn => {
+                btn.classList.toggle('hidden', !adminMode);
+                btn.addEventListener('click', (e) => openTaskTimeEditModal(
+                    e.currentTarget.dataset.id,
+                    e.currentTarget.dataset.statusField,
+                    e.currentTarget.dataset.timeField,
+                    e.currentTarget.dataset.timeCell
+                ));
             });
         }
 
@@ -3395,6 +3434,107 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         function tbodyRowFor(id) {
             return document.querySelector(`#taskRecordTableBody tr[data-row-id="${id}"]`);
+        }
+
+        // ============================================================
+        // ADMIN: Manual Timestamp Edit for Printed / Task Done
+        // ============================================================
+        let taskTimeEditCtx = null; // { id, statusField, timeField, timeCellClass }
+
+        // "YYYY-MM-DD HH:mm:ss" -> "YYYY-MM-DDTHH:mm:ss" (for <input type="datetime-local">)
+        function stampToDatetimeLocal(stamp) {
+            if (!stamp) return '';
+            const m = String(stamp).trim().match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+            if (!m) return '';
+            return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6] || '00'}`;
+        }
+
+        // "YYYY-MM-DDTHH:mm:ss" (from <input>) -> "YYYY-MM-DD HH:mm:ss" (stored format)
+        function datetimeLocalToStamp(val) {
+            if (!val) return null;
+            const [datePart, timePart] = val.split('T');
+            if (!datePart || !timePart) return null;
+            const timeFull = timePart.length === 5 ? `${timePart}:00` : timePart;
+            return `${datePart} ${timeFull}`;
+        }
+
+        function openTaskTimeEditModal(id, statusField, timeField, timeCellClass) {
+            if (!isAdminUser()) return;
+            taskTimeEditCtx = { id: parseInt(id, 10), statusField, timeField, timeCellClass };
+            const local = taskRecordRows.find(r => r.id === taskTimeEditCtx.id);
+            const currentStamp = local ? local[timeField] : '';
+
+            document.getElementById('taskTimeEditModalTitle').textContent =
+                `🛠️ Edit ${timeField === 'time_printed' ? 'Time Printed' : 'Time Task Done'}`;
+            document.getElementById('taskTimeEditInput').value = stampToDatetimeLocal(currentStamp);
+
+            const modal = document.getElementById('taskTimeEditModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeTaskTimeEditModal() {
+            const modal = document.getElementById('taskTimeEditModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            taskTimeEditCtx = null;
+        }
+
+        async function saveTaskTimeEdit(clear) {
+            if (!taskTimeEditCtx) return;
+            const { id, statusField, timeField, timeCellClass } = taskTimeEditCtx;
+            const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
+
+            const rawVal = clear ? '' : document.getElementById('taskTimeEditInput').value;
+            const stamp = clear ? null : datetimeLocalToStamp(rawVal);
+
+            if (!clear && rawVal && !stamp) {
+                alert('❌ Please enter a valid date & time.');
+                return;
+            }
+
+            const payload = { [timeField]: stamp, [statusField]: stamp ? 'YES' : null };
+
+            const saveBtn = document.getElementById('taskTimeEditSaveBtn');
+            const clearBtn = document.getElementById('taskTimeEditClearBtn');
+            saveBtn.disabled = true;
+            clearBtn.disabled = true;
+
+            const { error } = await _supabase.from(cfg.table).update(payload).eq('id', id);
+
+            saveBtn.disabled = false;
+            clearBtn.disabled = false;
+
+            if (error) {
+                alert(`❌ Failed to update timestamp: ${error.message}`);
+                return;
+            }
+
+            const row = tbodyRowFor(id);
+            if (row) {
+                const cell = row.querySelector('.' + timeCellClass);
+                if (cell) cell.textContent = stamp || '';
+                const checkboxSelector = statusField === 'printed' ? '.taskPrintedCheckbox' : '.taskDoneCheckbox';
+                const checkbox = row.querySelector(checkboxSelector);
+                if (checkbox) checkbox.checked = !!stamp;
+            }
+            const local = taskRecordRows.find(r => r.id === id);
+            if (local) {
+                local[statusField] = payload[statusField];
+                local[timeField] = payload[timeField];
+            }
+
+            closeTaskTimeEditModal();
+        }
+
+        function setupTaskTimeEditModal() {
+            document.getElementById('taskTimeEditModalCloseBtn').addEventListener('click', closeTaskTimeEditModal);
+            document.getElementById('taskTimeEditCancelBtn').addEventListener('click', closeTaskTimeEditModal);
+            document.getElementById('taskTimeEditSaveBtn').addEventListener('click', () => saveTaskTimeEdit(false));
+            document.getElementById('taskTimeEditClearBtn').addEventListener('click', () => saveTaskTimeEdit(true));
+            document.getElementById('taskTimeEditModal').addEventListener('click', (e) => {
+                if (e.target.id === 'taskTimeEditModal') closeTaskTimeEditModal();
+            });
         }
 
         // ============================================================

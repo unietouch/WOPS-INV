@@ -745,27 +745,33 @@
                             <button type="button" data-recordtype="reserved" class="taskRecordTypeBtn px-4 py-2 text-xs font-bold rounded-lg border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">📌 Reserved</button>
                         </div>
 
-                        <div class="flex flex-wrap items-end gap-2.5 mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
-                            <div class="flex flex-col">
-                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Area</label>
-                                <select id="taskRecordAreaFilter" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">All Areas</option>
-                                    <option value="BST1">BST1</option>
-                                    <option value="BST2">BST2</option>
-                                    <option value="BST3">BST3</option>
-                                    <option value="BST4">BST4</option>
-                                    <option value="BST5">BST5</option>
-                                </select>
+                        <div class="mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                            <div class="flex flex-wrap items-end gap-2.5">
+                                <div class="flex flex-col">
+                                    <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Date</label>
+                                    <input type="date" id="taskRecordDateFilter" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-40 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="flex flex-wrap gap-1.5 ml-auto mt-2 md:mt-0">
+                                    <button id="taskRecordClearFiltersBtn" class="border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg transition">✖ Clear Filters</button>
+                                    <button id="taskRecordLoadBtn" class="bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">🔄 Load Records</button>
+                                </div>
                             </div>
-                            <div class="flex flex-col">
-                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Only Unfinished</label>
-                                <select id="taskRecordPendingOnly" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Show All</option>
-                                    <option value="1">Pending Only</option>
-                                </select>
+
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1">Area:</span>
+                                <button type="button" data-area="" class="taskAreaPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition bg-blue-600 border-blue-600 text-white">All</button>
+                                <button type="button" data-area="BST1" class="taskAreaPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">BST1</button>
+                                <button type="button" data-area="BST2" class="taskAreaPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">BST2</button>
+                                <button type="button" data-area="BST3" class="taskAreaPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">BST3</button>
+                                <button type="button" data-area="BST4" class="taskAreaPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">BST4</button>
+                                <button type="button" data-area="BST5" class="taskAreaPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">BST5</button>
                             </div>
-                            <div class="flex flex-wrap gap-1.5 ml-auto mt-2 md:mt-0">
-                                <button id="taskRecordLoadBtn" class="bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">🔄 Load Records</button>
+
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1">Status:</span>
+                                <button type="button" data-status="" class="taskStatusPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition bg-blue-600 border-blue-600 text-white">All</button>
+                                <button type="button" data-status="pending" class="taskStatusPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">⏳ Pending</button>
+                                <button type="button" data-status="done" class="taskStatusPill px-3 py-1.5 text-[11px] font-bold rounded-full border transition border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">✅ Done</button>
                             </div>
                         </div>
 
@@ -3192,6 +3198,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         let taskParsedRows = null;
         let taskRecordActiveType = 'storage';
         let taskRecordRows = [];
+        let taskAreaFilterValue = '';
+        let taskStatusFilterValue = '';
 
         // "YYYY-MM-DD HH:mm:ss" in local time — sortable & easily re-parsed.
         function nowStampLocal() {
@@ -3419,8 +3427,29 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 });
             });
             document.getElementById('taskRecordLoadBtn').addEventListener('click', loadTaskRecordChecklist);
-            document.getElementById('taskRecordAreaFilter').addEventListener('change', loadTaskRecordChecklist);
-            document.getElementById('taskRecordPendingOnly').addEventListener('change', loadTaskRecordChecklist);
+            document.getElementById('taskRecordDateFilter').addEventListener('change', loadTaskRecordChecklist);
+            document.getElementById('taskRecordClearFiltersBtn').addEventListener('click', () => {
+                taskAreaFilterValue = '';
+                taskStatusFilterValue = '';
+                document.getElementById('taskRecordDateFilter').value = '';
+                document.querySelectorAll('.taskAreaPill').forEach(b => setPillActive(b, b.dataset.area === ''));
+                document.querySelectorAll('.taskStatusPill').forEach(b => setPillActive(b, b.dataset.status === ''));
+                loadTaskRecordChecklist();
+            });
+            document.querySelectorAll('.taskAreaPill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    taskAreaFilterValue = btn.dataset.area;
+                    document.querySelectorAll('.taskAreaPill').forEach(b => setPillActive(b, b === btn));
+                    loadTaskRecordChecklist();
+                });
+            });
+            document.querySelectorAll('.taskStatusPill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    taskStatusFilterValue = btn.dataset.status;
+                    document.querySelectorAll('.taskStatusPill').forEach(b => setPillActive(b, b === btn));
+                    loadTaskRecordChecklist();
+                });
+            });
             setupTaskMassEditBar();
 
             // --- Checkpoint Report wiring ---
@@ -3449,14 +3478,20 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 return;
             }
 
-            const areaFilter = document.getElementById('taskRecordAreaFilter').value;
-            const pendingOnly = document.getElementById('taskRecordPendingOnly').value === '1';
+            const areaFilter = taskAreaFilterValue;
+            const statusFilter = taskStatusFilterValue; // '' | 'pending' | 'done'
+            const dateFilter = document.getElementById('taskRecordDateFilter').value; // 'YYYY-MM-DD' or ''
 
             if (areaFilter) {
                 rows = rows.filter(r => (r[cfg.areaField] || '').toString().trim().toUpperCase() === areaFilter);
             }
-            if (pendingOnly) {
+            if (statusFilter === 'pending') {
                 rows = rows.filter(r => !isChecked(r.printed) || !isChecked(r.task));
+            } else if (statusFilter === 'done') {
+                rows = rows.filter(r => isChecked(r.printed) && isChecked(r.task));
+            }
+            if (dateFilter) {
+                rows = rows.filter(r => normalizeDateKey(r[cfg.dateField]) === dateFilter);
             }
 
             // Most recent first (by id, since date text formats vary)
@@ -3470,6 +3505,17 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             if (val === null || val === undefined) return false;
             const s = String(val).trim().toUpperCase();
             return s === 'YES' || s === 'TRUE' || s === '1' || s === 'Y' || s === 'X' || s === 'DONE' || s === 'PRINTED';
+        }
+
+        // Toggles the active/inactive visual state of a filter pill button.
+        function setPillActive(btn, active) {
+            if (active) {
+                btn.classList.add('bg-blue-600', 'border-blue-600', 'text-white');
+                btn.classList.remove('border-slate-200', 'dark:border-slate-700', 'text-slate-600', 'dark:text-slate-300');
+            } else {
+                btn.classList.remove('bg-blue-600', 'border-blue-600', 'text-white');
+                btn.classList.add('border-slate-200', 'dark:border-slate-700', 'text-slate-600', 'dark:text-slate-300');
+            }
         }
 
         let taskSelectedIds = new Set();

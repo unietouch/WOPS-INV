@@ -700,7 +700,7 @@
                 <div id="tabTaskLogView" class="tab-content hidden space-y-6">
 
                     <!-- Paste Ingest Panel -->
-                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                    <div id="taskPasteIngestPanel" class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
                         <h2 class="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3 mb-2">Task Execution Log — Bulk Paste Ingest</h2>
                         <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-5">Paste directly from Excel for any of the three source types. All records consolidate below by Executed By &amp; Date.</p>
 
@@ -731,7 +731,7 @@
                     </div>
 
                     <!-- Live Checklist Panel (Printed / Task Done checkboxes) -->
-                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                    <div id="taskLiveChecklistPanel" class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
                         <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
                             <div>
                                 <h2 class="text-lg font-bold text-slate-900 dark:text-white">Live Task Checklist</h2>
@@ -811,7 +811,7 @@
                     </div>
 
                     <!-- Checkpoint Report Panel (10AM / 3PM / 8PM / 12AM) -->
-                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                    <div id="taskCheckpointReportPanel" class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
                         <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
                             <div>
                                 <h2 class="text-lg font-bold text-slate-900 dark:text-white">Daily Checkpoint Report</h2>
@@ -877,7 +877,7 @@
                     </div>
 
                     <!-- Consolidated Summary Panel -->
-                    <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                    <div id="taskConsolidatedSummaryPanel" class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
                         <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
                             <div>
                                 <h2 class="text-lg font-bold text-slate-900 dark:text-white">Consolidated Task Summary</h2>
@@ -1118,9 +1118,16 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         const AUTH_USERS = {
             "admin": "superadmin",
             "R. DIONEDA": "123",
-            "S. MALABARBAS": "123"
+            "S. MALABARBAS": "123",
+            "whsefl": "12345"
         };
         const AUTH_SESSION_KEY = "lh_auth_user";
+
+        // Users limited to specific sidebar tabs (by tab-button id). Any username NOT
+        // listed here gets full, unrestricted access to every tab as usual.
+        const RESTRICTED_ACCESS_USERS = {
+            "whsefl": ["tabBtnTaskLog"]
+        };
 
         // ============================================================
         // LIGHT / DARK MODE CONTROLLER MODULE
@@ -1210,6 +1217,37 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             if (!appInitialized) {
                 initApp();
                 appInitialized = true;
+            }
+            applyUserAccessRestrictions(username);
+        }
+
+        // Restricts the sidebar + Task Execution Log sub-panels for usernames listed in
+        // RESTRICTED_ACCESS_USERS. Users not listed there get full, unrestricted access.
+        function applyUserAccessRestrictions(username) {
+            const allowedTabs = RESTRICTED_ACCESS_USERS[username];
+            const allTabButtons = document.querySelectorAll('.tab-btn');
+
+            if (!allowedTabs) {
+                // Full access — make sure nothing is left hidden from a prior restricted session.
+                allTabButtons.forEach(b => b.classList.remove('hidden'));
+                document.getElementById('taskPasteIngestPanel')?.classList.remove('hidden');
+                document.getElementById('taskCheckpointReportPanel')?.classList.remove('hidden');
+                document.getElementById('taskConsolidatedSummaryPanel')?.classList.remove('hidden');
+                return;
+            }
+
+            // Hide every sidebar tab this user isn't allowed into.
+            allTabButtons.forEach(b => {
+                b.classList.toggle('hidden', !allowedTabs.includes(b.id));
+            });
+
+            // Task Execution Log access is narrowed to just the Live Task Checklist —
+            // Bulk Paste Ingest, Checkpoint Report, and Consolidated Summary stay hidden.
+            if (allowedTabs.includes('tabBtnTaskLog')) {
+                document.getElementById('taskPasteIngestPanel')?.classList.add('hidden');
+                document.getElementById('taskCheckpointReportPanel')?.classList.add('hidden');
+                document.getElementById('taskConsolidatedSummaryPanel')?.classList.add('hidden');
+                document.getElementById('tabBtnTaskLog')?.click();
             }
         }
 

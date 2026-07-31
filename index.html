@@ -747,8 +747,15 @@
 
                         <div class="flex flex-wrap items-end gap-2.5 mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
                             <div class="flex flex-col">
-                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Executed By</label>
-                                <input type="text" id="taskRecordExecFilter" placeholder="Search name..." class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Area</label>
+                                <select id="taskRecordAreaFilter" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Areas</option>
+                                    <option value="BST1">BST1</option>
+                                    <option value="BST2">BST2</option>
+                                    <option value="BST3">BST3</option>
+                                    <option value="BST4">BST4</option>
+                                    <option value="BST5">BST5</option>
+                                </select>
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Only Unfinished</label>
@@ -768,7 +775,7 @@
                                     <tr>
                                         <th class="px-3 py-3.5">Date</th>
                                         <th class="px-3 py-3.5">Reference / SKU</th>
-                                        <th class="px-3 py-3.5">Executed By</th>
+                                        <th class="px-3 py-3.5">Area</th>
                                         <th class="px-3 py-3.5 text-center">Printed</th>
                                         <th class="px-3 py-3.5">Time Printed</th>
                                         <th class="px-3 py-3.5 text-center">Task Done</th>
@@ -789,7 +796,7 @@
                         <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
                             <div>
                                 <h2 class="text-lg font-bold text-slate-900 dark:text-white">Daily Checkpoint Report</h2>
-                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Printed vs Task Done, per Executed By — snapshot at 10AM / 3PM / 8PM / 12AM.</p>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Printed vs Task Done, per Area — snapshot at 10AM / 3PM / 8PM / 12AM.</p>
                             </div>
                         </div>
 
@@ -807,7 +814,7 @@
                             <table class="w-full text-left text-xs border-collapse">
                                 <thead>
                                     <tr class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
-                                        <th class="px-3 py-3.5 align-bottom" rowspan="2">Executed By</th>
+                                        <th class="px-3 py-3.5 align-bottom" rowspan="2">Area</th>
                                         <th class="px-3 py-2 text-center border-l border-slate-200 dark:border-slate-700" colspan="2">10:00 AM</th>
                                         <th class="px-3 py-2 text-center border-l border-slate-200 dark:border-slate-700" colspan="2">3:00 PM</th>
                                         <th class="px-3 py-2 text-center border-l border-slate-200 dark:border-slate-700" colspan="2">8:00 PM</th>
@@ -839,14 +846,21 @@
                         <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 gap-4">
                             <div>
                                 <h2 class="text-lg font-bold text-slate-900 dark:text-white">Consolidated Task Summary</h2>
-                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Storage + Picking + Reserved, grouped by Executed By &amp; Date.</p>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Storage + Picking + Reserved, grouped by Area &amp; Date.</p>
                             </div>
                         </div>
 
                         <div class="flex flex-wrap items-end gap-2.5 mb-5 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
                             <div class="flex flex-col">
-                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Executed By</label>
-                                <input type="text" id="taskSummaryExecFilter" placeholder="Search name..." class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Area</label>
+                                <select id="taskSummaryAreaFilter" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-36 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Areas</option>
+                                    <option value="BST1">BST1</option>
+                                    <option value="BST2">BST2</option>
+                                    <option value="BST3">BST3</option>
+                                    <option value="BST4">BST4</option>
+                                    <option value="BST5">BST5</option>
+                                </select>
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">From Date</label>
@@ -867,7 +881,7 @@
                                 <thead>
                                     <tr class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
                                         <th class="px-3 py-3.5">Date</th>
-                                        <th class="px-3 py-3.5">Executed By</th>
+                                        <th class="px-3 py-3.5">Area</th>
                                         <th class="px-3 py-3.5 text-right">Storage Tasks</th>
                                         <th class="px-3 py-3.5 text-right">Picking Tasks</th>
                                         <th class="px-3 py-3.5 text-right">Reserved Tasks</th>
@@ -3100,6 +3114,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 dateField: 'created_on',
                 identifierField: 'product',
                 descField: 'product_short_desc',
+                areaField: 'area',
                 columns: ['created_on','w_order','area','storage','product','product_short_desc','batch','qty','um','username','picking','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['Created On','W. ORDER','AREA','STORAGE','Product','Product Short Description','Batch','QTY','UM','USERNAME','PICKING','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             },
@@ -3110,6 +3125,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 dateField: 'posting_date',
                 identifierField: 'material',
                 descField: 'description',
+                areaField: 'area',
                 columns: ['posting_date','pick_time','material_doc','material','description','destination','mvt','qty','um','batch','username','printed','time_printed','task','time_task_done','column1','executed_by'],
                 headers: ['Posting Date','Time','Material Doc','Material','Description','DESTINATION','MVT','QTY','UM','BATCH','UserName','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','Column1','EXECUTED BY']
             },
@@ -3120,6 +3136,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 dateField: 'activity_date',
                 identifierField: 'sku',
                 descField: null,
+                areaField: 'area',
                 columns: ['activity_date','so_number','obd_no','rdd','customer','sku','qty','latest_served','w_o','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['DATE','S.O','OBD NO.','RDD','CUSTOMER','SKU','QTY','LATEST SERVED','W.O','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             }
@@ -3296,7 +3313,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
             document.getElementById('taskSummaryLoadBtn').addEventListener('click', loadTaskConsolidatedSummary);
             document.getElementById('taskSummaryClearBtn').addEventListener('click', () => {
-                document.getElementById('taskSummaryExecFilter').value = '';
+                document.getElementById('taskSummaryAreaFilter').value = '';
                 document.getElementById('taskSummaryDateFrom').value = '';
                 document.getElementById('taskSummaryDateTo').value = '';
                 loadTaskConsolidatedSummary();
@@ -3317,9 +3334,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 });
             });
             document.getElementById('taskRecordLoadBtn').addEventListener('click', loadTaskRecordChecklist);
-            document.getElementById('taskRecordExecFilter').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') loadTaskRecordChecklist();
-            });
+            document.getElementById('taskRecordAreaFilter').addEventListener('change', loadTaskRecordChecklist);
             document.getElementById('taskRecordPendingOnly').addEventListener('change', loadTaskRecordChecklist);
 
             // --- Checkpoint Report wiring ---
@@ -3337,14 +3352,14 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             const tbody = document.getElementById('taskRecordTableBody');
             tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
 
-            const selectCols = `id,${cfg.dateField},${cfg.identifierField}${cfg.descField ? ',' + cfg.descField : ''},executed_by,printed,time_printed,task,time_task_done`;
+            const selectCols = `id,${cfg.dateField},${cfg.identifierField}${cfg.descField ? ',' + cfg.descField : ''},${cfg.areaField},printed,time_printed,task,time_task_done`;
             let rows = await fetchAllRows(cfg.table, selectCols);
 
-            const execFilter = (document.getElementById('taskRecordExecFilter').value || '').trim().toUpperCase();
+            const areaFilter = document.getElementById('taskRecordAreaFilter').value;
             const pendingOnly = document.getElementById('taskRecordPendingOnly').value === '1';
 
-            if (execFilter) {
-                rows = rows.filter(r => (r.executed_by || '').toUpperCase().includes(execFilter));
+            if (areaFilter) {
+                rows = rows.filter(r => (r[cfg.areaField] || '').toString().trim().toUpperCase() === areaFilter);
             }
             if (pendingOnly) {
                 rows = rows.filter(r => !isChecked(r.printed) || !isChecked(r.task));
@@ -3381,7 +3396,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40" data-row-id="${r.id}">
                     <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${escapeHtml(r[cfg.dateField])}</td>
                     <td class="px-3 py-2.5">${identifierHtml}</td>
-                    <td class="px-3 py-2.5 font-bold">${escapeHtml(r.executed_by)}</td>
+                    <td class="px-3 py-2.5 font-bold">${escapeHtml(r[cfg.areaField])}</td>
                     <td class="px-3 py-2.5 text-center">
                         <input type="checkbox" class="taskPrintedCheckbox w-4 h-4 accent-blue-600 cursor-pointer" data-id="${r.id}" ${printedChecked ? 'checked' : ''}>
                     </td>
@@ -3606,51 +3621,51 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Building checkpoint report...</td></tr>`;
 
             const [storageRows, pickingRows, reservedRows] = await Promise.all([
-                fetchAllRows('task_storage', 'executed_by,printed,time_printed,task,time_task_done'),
-                fetchAllRows('task_picking', 'executed_by,printed,time_printed,task,time_task_done'),
-                fetchAllRows('task_reserved', 'executed_by,printed,time_printed,task,time_task_done')
+                fetchAllRows('task_storage', 'area,printed,time_printed,task,time_task_done'),
+                fetchAllRows('task_picking', 'area,printed,time_printed,task,time_task_done'),
+                fetchAllRows('task_reserved', 'area,printed,time_printed,task,time_task_done')
             ]);
             const combined = [...storageRows, ...pickingRows, ...reservedRows];
 
             const [ry, rm, rd] = reportDateStr.split('-').map(n => parseInt(n, 10));
 
-            // Build per-executed-by tallies across the 4 checkpoints
-            const execMap = {};
-            function ensureExec(name) {
-                if (!execMap[name]) {
-                    execMap[name] = REPORT_CHECKPOINTS.map(() => ({ printed: 0, done: 0 }));
+            // Build per-area tallies across the 4 checkpoints
+            const areaMap = {};
+            function ensureArea(name) {
+                if (!areaMap[name]) {
+                    areaMap[name] = REPORT_CHECKPOINTS.map(() => ({ printed: 0, done: 0 }));
                 }
-                return execMap[name];
+                return areaMap[name];
             }
 
             combined.forEach(r => {
-                const executedBy = (r.executed_by || 'UNASSIGNED').trim() || 'UNASSIGNED';
+                const area = (r.area || 'UNASSIGNED').trim() || 'UNASSIGNED';
                 const printedDate = isChecked(r.printed) ? parseStampDate(r.time_printed) : null;
                 const doneDate = isChecked(r.task) ? parseStampDate(r.time_task_done) : null;
 
                 if (printedDate && sameCalendarDay(printedDate, ry, rm, rd)) {
-                    const tallies = ensureExec(executedBy);
+                    const tallies = ensureArea(area);
                     REPORT_CHECKPOINTS.forEach((cp, i) => {
                         if (beforeCheckpoint(printedDate, ry, rm, rd, cp)) tallies[i].printed++;
                     });
                 }
                 if (doneDate && sameCalendarDay(doneDate, ry, rm, rd)) {
-                    const tallies = ensureExec(executedBy);
+                    const tallies = ensureArea(area);
                     REPORT_CHECKPOINTS.forEach((cp, i) => {
                         if (beforeCheckpoint(doneDate, ry, rm, rd, cp)) tallies[i].done++;
                     });
                 }
             });
 
-            const execNames = Object.keys(execMap).sort((a, b) => a.localeCompare(b));
+            const areaNames = Object.keys(areaMap).sort((a, b) => a.localeCompare(b));
 
-            if (execNames.length === 0) {
+            if (areaNames.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="9" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No Printed/Task-Done activity recorded for ${escapeHtml(reportDateStr)}.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = execNames.map(name => {
-                const cells = execMap[name].map(t =>
+            tbody.innerHTML = areaNames.map(name => {
+                const cells = areaMap[name].map(t =>
                     `<td class="px-3 py-2.5 text-right border-l border-slate-100 dark:border-slate-800">${t.printed}</td><td class="px-3 py-2.5 text-right">${t.done}</td>`
                 ).join('');
                 return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
@@ -3690,40 +3705,40 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Consolidating task records...</td></tr>`;
 
             const [storageRows, pickingRows, reservedRows] = await Promise.all([
-                fetchAllRows('task_storage', 'created_on,executed_by'),
-                fetchAllRows('task_picking', 'posting_date,executed_by'),
-                fetchAllRows('task_reserved', 'activity_date,executed_by')
+                fetchAllRows('task_storage', 'created_on,area'),
+                fetchAllRows('task_picking', 'posting_date,area'),
+                fetchAllRows('task_reserved', 'activity_date,area')
             ]);
 
             const combined = [
-                ...storageRows.map(r => ({ type: 'storage', dateRaw: r.created_on, executedBy: r.executed_by })),
-                ...pickingRows.map(r => ({ type: 'picking', dateRaw: r.posting_date, executedBy: r.executed_by })),
-                ...reservedRows.map(r => ({ type: 'reserved', dateRaw: r.activity_date, executedBy: r.executed_by }))
+                ...storageRows.map(r => ({ type: 'storage', dateRaw: r.created_on, area: r.area })),
+                ...pickingRows.map(r => ({ type: 'picking', dateRaw: r.posting_date, area: r.area })),
+                ...reservedRows.map(r => ({ type: 'reserved', dateRaw: r.activity_date, area: r.area }))
             ];
 
-            const execFilter = (document.getElementById('taskSummaryExecFilter').value || '').trim().toUpperCase();
+            const areaFilter = document.getElementById('taskSummaryAreaFilter').value;
             const fromDate = document.getElementById('taskSummaryDateFrom').value || null;
             const toDate = document.getElementById('taskSummaryDateTo').value || null;
 
             const groups = {};
             combined.forEach(item => {
-                const executedBy = (item.executedBy || 'UNASSIGNED').trim() || 'UNASSIGNED';
-                if (execFilter && !executedBy.toUpperCase().includes(execFilter)) return;
+                const area = (item.area || 'UNASSIGNED').trim() || 'UNASSIGNED';
+                if (areaFilter && area.toUpperCase() !== areaFilter) return;
 
                 const dateKey = normalizeDateKey(item.dateRaw);
                 if (fromDate && dateKey < fromDate) return;
                 if (toDate && dateKey > toDate) return;
 
-                const key = `${dateKey}|||${executedBy}`;
+                const key = `${dateKey}|||${area}`;
                 if (!groups[key]) {
-                    groups[key] = { date: dateKey, executedBy, storage: 0, picking: 0, reserved: 0 };
+                    groups[key] = { date: dateKey, area, storage: 0, picking: 0, reserved: 0 };
                 }
                 groups[key][item.type]++;
             });
 
             const rows = Object.values(groups).sort((a, b) => {
                 if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-                return a.executedBy.localeCompare(b.executedBy);
+                return a.area.localeCompare(b.area);
             });
 
             if (rows.length === 0) {
@@ -3735,7 +3750,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 const total = r.storage + r.picking + r.reserved;
                 return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                     <td class="px-3 py-2.5 font-semibold">${escapeHtml(r.date)}</td>
-                    <td class="px-3 py-2.5 font-bold">${escapeHtml(r.executedBy)}</td>
+                    <td class="px-3 py-2.5 font-bold">${escapeHtml(r.area)}</td>
                     <td class="px-3 py-2.5 text-right">${r.storage || ''}</td>
                     <td class="px-3 py-2.5 text-right">${r.picking || ''}</td>
                     <td class="px-3 py-2.5 text-right">${r.reserved || ''}</td>

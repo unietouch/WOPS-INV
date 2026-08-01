@@ -3783,6 +3783,18 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     updateTaskMassEditBar();
                 });
             });
+            // Bound directly (like every other control in the row) instead of relying only
+            // on a delegated listener set up once at page load — that way it can never end
+            // up silently unwired if something earlier in setup ever fails.
+            tbody.querySelectorAll('.taskRowEditBtn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (!isAdminUser()) {
+                        alert('⚠️ Only the admin account can edit full records.');
+                        return;
+                    }
+                    openTaskRowEditModal(parseInt(btn.dataset.id, 10));
+                });
+            });
 
             // Admin-only visibility for the timestamp-edit pencils (delegated click handler is
             // wired once in setupTaskTimeEditModal(), so we only need to show/hide here).
@@ -4200,17 +4212,6 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('taskRowEditSaveBtn').addEventListener('click', saveTaskRowEdit);
             document.getElementById('taskRowEditModal').addEventListener('click', (e) => {
                 if (e.target.id === 'taskRowEditModal') closeTaskRowEditModal();
-            });
-
-            // Delegated listener — survives every re-render of the checklist.
-            document.getElementById('taskRecordTableBody').addEventListener('click', (e) => {
-                const btn = e.target.closest('.taskRowEditBtn');
-                if (!btn) return;
-                if (!isAdminUser()) {
-                    alert('⚠️ Only the admin account can edit full records.');
-                    return;
-                }
-                openTaskRowEditModal(parseInt(btn.dataset.id, 10));
             });
         }
 

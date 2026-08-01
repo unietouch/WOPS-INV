@@ -40,6 +40,15 @@
         #taskRecordTableBody.admin-edit-mode .taskRowEditBtn {
             display: inline-flex;
         }
+        /* Admin-only "delete row" button in the Live Task Checklist — hidden for
+           every account (including whsefl) unless the admin-edit-mode class is
+           active, which only happens when isAdminUser() is true. */
+        .taskRowDeleteBtn {
+            display: none;
+        }
+        #taskRecordTableBody.admin-edit-mode .taskRowDeleteBtn {
+            display: inline-flex;
+        }
         /* Smooth collapsing transitions */
         .sidebar-transition {
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -824,6 +833,7 @@
                                     <tr>
                                         <th class="px-3 py-3.5 w-8"><input type="checkbox" id="taskRecordSelectAll" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer"></th>
                                         <th class="px-3 py-3.5 w-8">Edit</th>
+                                        <th class="px-3 py-3.5 w-8">Del</th>
                                         <th class="px-3 py-3.5">Date</th>
                                         <th class="px-3 py-3.5" id="taskExtraColHeader">W. ORDER</th>
                                         <th class="px-3 py-3.5">Reference / SKU</th>
@@ -838,7 +848,7 @@
                                 </thead>
                                 <tbody id="taskRecordTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                                     <tr>
-                                        <td colspan="12" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
+                                        <td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -3661,7 +3671,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             const tbody = document.getElementById('taskRecordTableBody');
             const extraHeaderEl = document.getElementById('taskExtraColHeader');
             if (extraHeaderEl) extraHeaderEl.textContent = cfg.extraHeader;
-            tbody.innerHTML = `<tr><td colspan="12" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
 
             const selectCols = `id,${cfg.columns.join(',')}`;
             let rows;
@@ -3669,7 +3679,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 rows = await fetchAllRowsChecked(cfg.table, selectCols);
             } catch (err) {
                 console.error('loadTaskRecordChecklist failed:', err);
-                tbody.innerHTML = `<tr><td colspan="12" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
                 alert(`❌ Failed to load ${cfg.label} records:\n${err.message}\n\nThis usually means the "${cfg.areaField}" (or another selected) column doesn't exist yet on the "${cfg.table}" table.`);
                 return;
             }
@@ -3724,7 +3734,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             if (selectAllCb) selectAllCb.checked = false;
 
             if (!rows || rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
                 return;
             }
 
@@ -3745,6 +3755,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     </td>
                     <td class="px-3 py-2.5">
                         <button type="button" class="taskRowEditBtn text-[11px] text-blue-500 hover:text-blue-700" data-id="${r.id}" title="Admin: edit full record">✏️</button>
+                    </td>
+                    <td class="px-3 py-2.5">
+                        <button type="button" class="taskRowDeleteBtn text-[11px] text-red-500 hover:text-red-700" data-id="${r.id}" title="Admin: delete this record">🗑️</button>
                     </td>
                     <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${escapeHtml(r[cfg.dateField])}</td>
                     <td class="px-3 py-2.5">${cfg.extraField ? escapeHtml(r[cfg.extraField]) : ''}</td>
@@ -3793,6 +3806,21 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                         return;
                     }
                     openTaskRowEditModal(parseInt(btn.dataset.id, 10));
+                });
+            });
+
+            // Bound directly per-row (same pattern as the edit pencil above) so the
+            // delete button is never left unwired even if delegated setup fails.
+            // The button itself is only visible in admin-edit-mode (CSS), and this
+            // handler double-checks isAdminUser() as well — so accounts like whsefl
+            // never see it and can never trigger it directly either.
+            tbody.querySelectorAll('.taskRowDeleteBtn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (!isAdminUser()) {
+                        alert('⚠️ Only the admin account can delete records.');
+                        return;
+                    }
+                    deleteTaskRow(parseInt(btn.dataset.id, 10));
                 });
             });
 
@@ -4160,6 +4188,27 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             taskRowEditCtx = null;
+        }
+
+        // ============================================================
+        // ADMIN: Delete a single Live Task Checklist record
+        // ============================================================
+        async function deleteTaskRow(id) {
+            if (!isAdminUser()) return;
+            const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
+            if (!confirm(`Confirm removal of this ${cfg.label} record? Action cannot be undone.`)) return;
+            try {
+                const { error } = await _supabase.from(cfg.table).delete().eq('id', id);
+                if (error) {
+                    alert(`❌ Failed to delete record: ${error.message}`);
+                    return;
+                }
+                taskSelectedIds.delete(id);
+                await loadTaskRecordChecklist(); // refresh so every dependent view (filters, report) stays in sync
+            } catch (err) {
+                console.error('deleteTaskRow failed:', err);
+                alert('❌ Unexpected error while deleting: ' + (err.message || err));
+            }
         }
 
         async function saveTaskRowEdit() {

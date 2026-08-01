@@ -1248,6 +1248,17 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         const AUTH_SESSION_KEY = "lh_auth_user";
         const USERS_TABLE = "app_users";
 
+        // Supabase/Postgres can hand back boolean-ish columns as real booleans, or as
+        // strings/numbers ("true"/"false", "t"/"f", 1/0) depending on how the column
+        // was originally created. Never trust !!value for these — a non-empty string
+        // like "false" is truthy in JS. This normalizes any of those shapes safely.
+        function toBool(v) {
+            if (typeof v === 'boolean') return v;
+            if (typeof v === 'number') return v === 1;
+            if (typeof v === 'string') return ['true', 't', '1', 'yes'].includes(v.trim().toLowerCase());
+            return false;
+        }
+
         // Master list of assignable tabs (id = sidebar button id). Used by both the
         // access-restriction logic and the User Management tab-picker UI.
         const ALL_TABS = [
@@ -1372,10 +1383,10 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             return {
                 id: row.id,
                 username: row.username,
-                is_admin: !!row.is_admin,
+                is_admin: toBool(row.is_admin),
                 allowed_tabs: Array.isArray(row.allowed_tabs) && row.allowed_tabs.length > 0 ? row.allowed_tabs : null,
-                can_edit: !!row.can_edit,
-                can_delete: !!row.can_delete
+                can_edit: toBool(row.can_edit),
+                can_delete: toBool(row.can_delete)
             };
         }
 
@@ -3466,9 +3477,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     ? u.allowed_tabs.map(id => (ALL_TABS.find(t => t.id === id) || {}).label || id).join(', ')
                     : 'All tabs';
                 const badges = [
-                    u.is_admin ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">ADMIN</span>' : '',
-                    u.can_edit ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">CAN EDIT</span>' : '',
-                    u.can_delete ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">CAN DELETE</span>' : ''
+                    toBool(u.is_admin) ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">ADMIN</span>' : '',
+                    toBool(u.can_edit) ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">CAN EDIT</span>' : '',
+                    toBool(u.can_delete) ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">CAN DELETE</span>' : ''
                 ].join(' ');
                 return `
                     <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
@@ -3516,9 +3527,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('userMgmtUsername').disabled = true; // keep usernames stable once created
             document.getElementById('userMgmtPassword').value = '';
             document.getElementById('userMgmtPassword').placeholder = 'Leave blank to keep current password';
-            document.getElementById('userMgmtIsAdmin').checked = !!u.is_admin;
-            document.getElementById('userMgmtCanEdit').checked = !!u.can_edit;
-            document.getElementById('userMgmtCanDelete').checked = !!u.can_delete;
+            document.getElementById('userMgmtIsAdmin').checked = toBool(u.is_admin);
+            document.getElementById('userMgmtCanEdit').checked = toBool(u.can_edit);
+            document.getElementById('userMgmtCanDelete').checked = toBool(u.can_delete);
             document.getElementById('userMgmtFormError').textContent = '';
             document.getElementById('userMgmtCancelEditBtn').classList.remove('hidden');
             document.getElementById('userMgmtSaveBtn').textContent = '💾 Update Account';

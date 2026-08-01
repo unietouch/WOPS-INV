@@ -3436,6 +3436,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         // toggle per-account Can Edit / Can Delete permissions.
         // ============================================================
         let userMgmtEditingId = null; // null = "add new" mode, otherwise editing this row's id
+        let userMgmtIsEditMode = false; // tracks edit vs add mode independently of id truthiness
+        let userMgmtEditingUsername = null;
         let userMgmtCache = [];
 
         function renderUserMgmtTabCheckboxes(selectedIds) {
@@ -3451,6 +3453,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         function resetUserMgmtForm() {
             userMgmtEditingId = null;
+            userMgmtIsEditMode = false;
+            userMgmtEditingUsername = null;
             document.getElementById('userMgmtFormTitle').textContent = 'Add New Account';
             document.getElementById('userMgmtEditId').value = '';
             document.getElementById('userMgmtUsername').value = '';
@@ -3521,6 +3525,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             const u = userMgmtCache[index];
             if (!u) { console.error('[startEditUserMgmt] no cached user at index:', index, userMgmtCache); return; }
             userMgmtEditingId = u.id; // keep the original value/type as returned by Supabase
+            userMgmtIsEditMode = true;
+            userMgmtEditingUsername = u.username;
             document.getElementById('userMgmtFormTitle').textContent = `Edit Account — ${u.username}`;
             document.getElementById('userMgmtEditId').value = u.id;
             document.getElementById('userMgmtUsername').value = u.username;
@@ -3540,13 +3546,18 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         async function deleteUserMgmtAccount(index) {
             const u = userMgmtCache[index];
             if (!u) return;
+            if (u.id === undefined || u.id === null) {
+                console.error('[deleteUserMgmtAccount] cached user has no id:', u);
+                alert('❌ Could not identify this account\'s row (missing id). Check console — the app_users table may be missing/misnaming its id column.');
+                return;
+            }
             if (!confirm(`Delete account "${u.username}"? This cannot be undone.`)) return;
             const { error } = await _supabase.from(USERS_TABLE).delete().eq('id', u.id);
             if (error) {
                 alert(`❌ Failed to delete account: ${error.message}`);
                 return;
             }
-            if (String(userMgmtEditingId) === String(u.id)) resetUserMgmtForm();
+            if (userMgmtIsEditMode && userMgmtEditingUsername === u.username) resetUserMgmtForm();
             await loadUserMgmtList();
         }
 
@@ -3587,13 +3598,12 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 const selectedTabs = Array.from(document.querySelectorAll('.userMgmtTabCheckbox:checked')).map(cb => cb.value);
 
                 if (!username) { errEl.textContent = '⚠️ Username is required.'; return; }
-                if (username.toLowerCase() === BOOTSTRAP_ADMIN.username && !userMgmtEditingId) {
+                if (username.toLowerCase() === BOOTSTRAP_ADMIN.username && !userMgmtIsEditMode) {
                     errEl.textContent = '⚠️ "admin" is reserved for the built-in bootstrap account.';
                     return;
                 }
-                if (!userMgmtEditingId && !password) { errEl.textContent = '⚠️ Password is required for a new account.'; return; }
 
-                if (userMgmtEditingId === undefined || userMgmtEditingId === null) {
+                if (userMgmtIsEditMode && (userMgmtEditingId === undefined || userMgmtEditingId === null)) {
                     // Editing mode was entered but the underlying row has no id — this would
                     // silently fail (or worse, update the wrong row). Surface it instead.
                     console.error('[userMgmt save] userMgmtEditingId is missing while in edit mode. userMgmtCache:', userMgmtCache);
@@ -3601,9 +3611,11 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     return;
                 }
 
+                if (!userMgmtIsEditMode && !password) { errEl.textContent = '⚠️ Password is required for a new account.'; return; }
+
                 saveBtn.disabled = true;
                 try {
-                    if (userMgmtEditingId) {
+                    if (userMgmtIsEditMode) {
                         const payload = {
                             is_admin: isAdmin,
                             can_edit: canEdit,

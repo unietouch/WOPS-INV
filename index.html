@@ -3487,10 +3487,10 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             }).join('');
 
             listEl.querySelectorAll('[data-role="userMgmtEdit"]').forEach(btn => {
-                btn.addEventListener('click', () => startEditUserMgmt(parseInt(btn.dataset.id, 10)));
+                btn.addEventListener('click', () => startEditUserMgmt(btn.dataset.id));
             });
             listEl.querySelectorAll('[data-role="userMgmtDelete"]').forEach(btn => {
-                btn.addEventListener('click', () => deleteUserMgmtAccount(parseInt(btn.dataset.id, 10)));
+                btn.addEventListener('click', () => deleteUserMgmtAccount(btn.dataset.id));
             });
         }
 
@@ -3507,9 +3507,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         }
 
         function startEditUserMgmt(id) {
-            const u = userMgmtCache.find(r => r.id === id);
-            if (!u) return;
-            userMgmtEditingId = id;
+            const u = userMgmtCache.find(r => String(r.id) === String(id));
+            if (!u) { console.error('[startEditUserMgmt] no cached user matched id:', id, userMgmtCache); return; }
+            userMgmtEditingId = u.id; // keep the original value/type as returned by Supabase
             document.getElementById('userMgmtFormTitle').textContent = `Edit Account — ${u.username}`;
             document.getElementById('userMgmtEditId').value = id;
             document.getElementById('userMgmtUsername').value = u.username;
@@ -3527,15 +3527,15 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         }
 
         async function deleteUserMgmtAccount(id) {
-            const u = userMgmtCache.find(r => r.id === id);
+            const u = userMgmtCache.find(r => String(r.id) === String(id));
             if (!u) return;
             if (!confirm(`Delete account "${u.username}"? This cannot be undone.`)) return;
-            const { error } = await _supabase.from(USERS_TABLE).delete().eq('id', id);
+            const { error } = await _supabase.from(USERS_TABLE).delete().eq('id', u.id);
             if (error) {
                 alert(`❌ Failed to delete account: ${error.message}`);
                 return;
             }
-            if (userMgmtEditingId === id) resetUserMgmtForm();
+            if (String(userMgmtEditingId) === String(id)) resetUserMgmtForm();
             await loadUserMgmtList();
         }
 

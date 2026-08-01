@@ -26,27 +26,28 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Admin-only timestamp edit pencils in the Live Task Checklist */
+        /* Timestamp edit pencils in the Live Task Checklist — visible to admins and
+           accounts granted the "Can Edit" permission via User Management. */
         .taskTimeEditBtn {
             display: none;
         }
-        #taskRecordTableBody.admin-edit-mode .taskTimeEditBtn {
+        #taskRecordTableBody.edit-perm-mode .taskTimeEditBtn {
             display: inline;
         }
-        /* Admin-only "edit full row" button in the Live Task Checklist */
+        /* "Edit full row" button in the Live Task Checklist — same permission as above. */
         .taskRowEditBtn {
             display: none;
         }
-        #taskRecordTableBody.admin-edit-mode .taskRowEditBtn {
+        #taskRecordTableBody.edit-perm-mode .taskRowEditBtn {
             display: inline-flex;
         }
-        /* Admin-only "delete row" button in the Live Task Checklist — hidden for
-           every account (including whsefl) unless the admin-edit-mode class is
-           active, which only happens when isAdminUser() is true. */
+        /* "Delete row" button in the Live Task Checklist — hidden for every account
+           unless the delete-perm-mode class is active, which only happens when
+           canDeleteRecords() is true (admins, or accounts granted "Can Delete"). */
         .taskRowDeleteBtn {
             display: none;
         }
-        #taskRecordTableBody.admin-edit-mode .taskRowDeleteBtn {
+        #taskRecordTableBody.delete-perm-mode .taskRowDeleteBtn {
             display: inline-flex;
         }
         /* Smooth collapsing transitions */
@@ -188,6 +189,10 @@
                     <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500 sidebar-text">Operator</p>
                     <p id="currentUserLabel" class="text-xs font-bold text-white truncate"></p>
                 </div>
+                <button id="manageUsersBtn" class="hidden w-full flex items-center justify-center py-2 px-3 text-xs bg-blue-950/40 hover:bg-blue-800 text-blue-300 hover:text-white rounded-lg border border-blue-900/30 transition font-bold gap-2" title="Admin: manage user accounts">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4"/></svg>
+                    <span class="sidebar-text">Manage Users</span>
+                </button>
                 <button id="logoutBtn" class="w-full flex items-center justify-center py-2 px-3 text-xs bg-red-950/40 hover:bg-red-800 text-red-300 hover:text-white rounded-lg border border-red-900/30 transition font-bold gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                     <span class="sidebar-text">Logout</span>
@@ -1068,6 +1073,74 @@
     </div>
 
     <!-- ============================================================
+         USER MANAGEMENT MODAL (Admin-only: accounts, tab access, edit/delete perms)
+         ============================================================ -->
+    <div id="userMgmtModal" class="fixed inset-0 z-[95] bg-black/60 hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-slate-100 dark:border-slate-800">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 px-6 py-4 sticky top-0 bg-white dark:bg-slate-900 z-10">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white">👥 User Management</h3>
+                    <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Accounts, Tab Access &amp; Edit/Delete Permissions</p>
+                </div>
+                <button id="userMgmtCloseBtn" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Existing Users List -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3">Existing Accounts</h4>
+                    <div id="userMgmtList" class="space-y-2">
+                        <p class="text-xs text-slate-400 italic px-1">Loading users…</p>
+                    </div>
+                </div>
+
+                <!-- Add / Edit User Form -->
+                <div class="border-t border-slate-100 dark:border-slate-800 pt-5">
+                    <h4 id="userMgmtFormTitle" class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3">Add New Account</h4>
+                    <input type="hidden" id="userMgmtEditId">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Username</label>
+                            <input type="text" id="userMgmtUsername" autocomplete="off" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Password</label>
+                            <input type="text" id="userMgmtPassword" autocomplete="off" placeholder="Leave blank to keep current password" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-5 mt-4">
+                        <label class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="userMgmtIsAdmin" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer">
+                            Admin (full access to every tab + all permissions)
+                        </label>
+                        <label class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="userMgmtCanEdit" class="w-3.5 h-3.5 accent-emerald-600 cursor-pointer">
+                            Can Edit records
+                        </label>
+                        <label class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="userMgmtCanDelete" class="w-3.5 h-3.5 accent-red-600 cursor-pointer">
+                            Can Delete records
+                        </label>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">Tab Access <span class="text-slate-400 normal-case font-medium">(none checked = full access to every tab)</span></label>
+                        <div id="userMgmtTabsList" class="grid grid-cols-2 md:grid-cols-3 gap-2"></div>
+                    </div>
+
+                    <p id="userMgmtFormError" class="text-xs text-red-600 dark:text-red-400 h-4 font-semibold mt-3"></p>
+
+                    <div class="flex justify-end gap-3 mt-2">
+                        <button id="userMgmtCancelEditBtn" class="hidden bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 px-5 rounded-lg text-xs transition">Cancel Edit</button>
+                        <button id="userMgmtSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-lg text-xs shadow-md transition">💾 Save Account</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
          BULK STATUS UPDATE MODAL (Preserved features)
          ============================================================ -->
     <div id="bulkStatusModal" class="fixed inset-0 z-[95] bg-black/60 hidden items-center justify-center p-4 backdrop-blur-sm">
@@ -1167,19 +1240,28 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         }
 
         // Authentication Matrix Configuration
-        const AUTH_USERS = {
-            "admin": "superadmin",
-            "R. DIONEDA": "123",
-            "S. MALABARBAS": "123",
-            "whsefl": "12345"
-        };
+        // Bootstrap admin — a hardcoded fallback so the admin account can never be
+        // locked out even if the app_users table is empty, unreachable, or the
+        // record gets accidentally deleted. Every other account is managed entirely
+        // through the User Management panel (Supabase "app_users" table).
+        const BOOTSTRAP_ADMIN = { username: "admin", password: "superadmin" };
         const AUTH_SESSION_KEY = "lh_auth_user";
+        const USERS_TABLE = "app_users";
 
-        // Users limited to specific sidebar tabs (by tab-button id). Any username NOT
-        // listed here gets full, unrestricted access to every tab as usual.
-        const RESTRICTED_ACCESS_USERS = {
-            "whsefl": ["tabBtnTaskLog"]
-        };
+        // Master list of assignable tabs (id = sidebar button id). Used by both the
+        // access-restriction logic and the User Management tab-picker UI.
+        const ALL_TABS = [
+            { id: "tabBtnReservation", label: "Registration Entry" },
+            { id: "tabBtnAllReservations", label: "All Reservation Logs" },
+            { id: "tabBtnReport", label: "Report" },
+            { id: "tabBtnMasterDB", label: "MasterDB" },
+            { id: "tabBtnCustomerDB", label: "Customer" },
+            { id: "tabBtnTaskLog", label: "Task Execution Log" }
+        ];
+
+        // Populated on login (and refreshed silently from Supabase) with the
+        // signed-in account's permission record: { username, is_admin, allowed_tabs, can_edit, can_delete }
+        let currentUserRecord = null;
 
         // ============================================================
         // LIGHT / DARK MODE CONTROLLER MODULE
@@ -1251,9 +1333,13 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         // AUTH MODULE GATEWAY
         // ============================================================
         function checkAuthOnLoad() {
-            const savedUser = sessionStorage.getItem(AUTH_SESSION_KEY);
-            if (savedUser && Object.prototype.hasOwnProperty.call(AUTH_USERS, savedUser)) {
-                grantAccess(savedUser);
+            const savedRaw = sessionStorage.getItem(AUTH_SESSION_KEY);
+            let savedRecord = null;
+            if (savedRaw) {
+                try { savedRecord = JSON.parse(savedRaw); } catch (e) { savedRecord = null; }
+            }
+            if (savedRecord && savedRecord.username) {
+                grantAccess(savedRecord);
             } else {
                 document.getElementById('loginOverlay').classList.remove('hidden');
                 document.getElementById('appShell').classList.add('hidden');
@@ -1261,22 +1347,73 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             }
         }
 
-        function grantAccess(username) {
-            sessionStorage.setItem(AUTH_SESSION_KEY, username);
+        // Looks up a username/password against the app_users table. Falls back to the
+        // hardcoded BOOTSTRAP_ADMIN so the admin account always has a way in.
+        async function authenticateUser(username, password) {
+            if (username === BOOTSTRAP_ADMIN.username && password === BOOTSTRAP_ADMIN.password) {
+                return { username: "admin", is_admin: true, allowed_tabs: null, can_edit: true, can_delete: true };
+            }
+            try {
+                const { data, error } = await _supabase
+                    .from(USERS_TABLE)
+                    .select('*')
+                    .eq('username', username)
+                    .maybeSingle();
+                if (error || !data) return null;
+                if (data.password !== password) return null;
+                return normalizeUserRecord(data);
+            } catch (err) {
+                console.error('[authenticateUser] lookup failed:', err);
+                return null;
+            }
+        }
+
+        function normalizeUserRecord(row) {
+            return {
+                id: row.id,
+                username: row.username,
+                is_admin: !!row.is_admin,
+                allowed_tabs: Array.isArray(row.allowed_tabs) && row.allowed_tabs.length > 0 ? row.allowed_tabs : null,
+                can_edit: !!row.can_edit,
+                can_delete: !!row.can_delete
+            };
+        }
+
+        function grantAccess(record) {
+            currentUserRecord = record;
+            sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(record));
             document.getElementById('loginOverlay').classList.add('hidden');
             document.getElementById('appShell').classList.remove('hidden');
-            document.getElementById('currentUserLabel').textContent = username;
+            document.getElementById('currentUserLabel').textContent = record.username;
             if (!appInitialized) {
                 initApp();
                 appInitialized = true;
             }
-            applyUserAccessRestrictions(username);
+            applyUserAccessRestrictions();
+            document.getElementById('manageUsersBtn')?.classList.toggle('hidden', !isAdminUser());
+
+            // Silently refresh permissions from Supabase in the background (skip for the
+            // hardcoded bootstrap admin, which has no DB row) so a permission change made
+            // by another admin takes effect without forcing a logout/login.
+            if (record.username !== BOOTSTRAP_ADMIN.username) {
+                _supabase.from(USERS_TABLE).select('*').eq('username', record.username).maybeSingle()
+                    .then(({ data }) => {
+                        if (data) {
+                            currentUserRecord = normalizeUserRecord(data);
+                            sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUserRecord));
+                            applyUserAccessRestrictions();
+                            document.getElementById('manageUsersBtn')?.classList.toggle('hidden', !isAdminUser());
+                        }
+                    })
+                    .catch(() => {});
+            }
         }
 
-        // Restricts the sidebar + Task Execution Log sub-panels for usernames listed in
-        // RESTRICTED_ACCESS_USERS. Users not listed there get full, unrestricted access.
-        function applyUserAccessRestrictions(username) {
-            const allowedTabs = RESTRICTED_ACCESS_USERS[username];
+        // Restricts the sidebar + Task Execution Log sub-panels based on the signed-in
+        // account's allowed_tabs (from Supabase). A null/empty allowed_tabs means full,
+        // unrestricted access to every tab.
+        function applyUserAccessRestrictions() {
+            const allowedTabs = currentUserRecord ? currentUserRecord.allowed_tabs : null;
             const allTabButtons = document.querySelectorAll('.tab-btn');
 
             if (!allowedTabs) {
@@ -1293,27 +1430,40 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 b.classList.toggle('hidden', !allowedTabs.includes(b.id));
             });
 
-            // Task Execution Log access is narrowed to just the Live Task Checklist —
-            // Bulk Paste Ingest, Checkpoint Report, and Consolidated Summary stay hidden.
-            if (allowedTabs.includes('tabBtnTaskLog')) {
+            // If Task Execution Log is the *only* tab this account can reach, narrow it
+            // to just the Live Task Checklist — Bulk Paste Ingest, Checkpoint Report, and
+            // Consolidated Summary stay hidden (preserves the original whsefl-style setup).
+            if (allowedTabs.length === 1 && allowedTabs.includes('tabBtnTaskLog')) {
                 document.getElementById('taskPasteIngestPanel')?.classList.add('hidden');
                 document.getElementById('taskCheckpointReportPanel')?.classList.add('hidden');
                 document.getElementById('taskConsolidatedSummaryPanel')?.classList.add('hidden');
                 document.getElementById('tabBtnTaskLog')?.click();
+            } else {
+                document.getElementById('taskPasteIngestPanel')?.classList.remove('hidden');
+                document.getElementById('taskCheckpointReportPanel')?.classList.remove('hidden');
+                document.getElementById('taskConsolidatedSummaryPanel')?.classList.remove('hidden');
+                // Land on the first tab this account is allowed to see.
+                const firstAllowed = document.getElementById(allowedTabs[0]);
+                firstAllowed?.click();
             }
         }
 
         function setupAuthListeners() {
-            document.getElementById('loginForm').addEventListener('submit', (e) => {
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const user = document.getElementById('loginUsername').value.trim();
                 const pass = document.getElementById('loginPassword').value;
                 const errEl = document.getElementById('loginError');
+                const submitBtn = document.querySelector('#loginForm button[type="submit"]');
 
-                if (Object.prototype.hasOwnProperty.call(AUTH_USERS, user) && AUTH_USERS[user] === pass) {
-                    errEl.textContent = '';
+                submitBtn.disabled = true;
+                errEl.textContent = '';
+                const record = await authenticateUser(user, pass);
+                submitBtn.disabled = false;
+
+                if (record) {
                     document.getElementById('loginForm').reset();
-                    grantAccess(user);
+                    grantAccess(record);
                 } else {
                     errEl.textContent = '⚠️ Invalid username or password.';
                 }
@@ -1342,6 +1492,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 ['setupDBManagementTabs', setupDBManagementTabs],
                 ['setupLedgerActions', setupLedgerActions],
                 ['setupEditModal', setupEditModal],
+                ['setupUserMgmtUI', setupUserMgmtUI],
                 ['setupBulkStatusModal', setupBulkStatusModal],
                 ['setupReportView', setupReportView],
                 ['setupFefoFilters', setupFefoFilters],
@@ -1868,8 +2019,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     <td class="px-4 py-2 font-mono font-bold text-slate-700 dark:text-slate-300 mdb-code-cell">${escapeHtml(m.material_code)}</td>
                     <td class="px-4 py-2 text-slate-600 dark:text-slate-400 mdb-desc-cell">${escapeHtml(m.material_description)}</td>
                     <td class="px-4 py-2 text-center whitespace-nowrap">
-                        <button class="mdb-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-code="${escapeHtml(m.material_code)}">✏️ Edit</button>
-                        <button class="mdb-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-code="${escapeHtml(m.material_code)}">🗑️ Delete</button>
+                        ${canEditRecords() ? `<button class="mdb-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-code="${escapeHtml(m.material_code)}">✏️ Edit</button>` : ''}
+                        ${canDeleteRecords() ? `<button class="mdb-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-code="${escapeHtml(m.material_code)}">🗑️ Delete</button>` : ''}
                     </td>`;
                 body.appendChild(tr);
             });
@@ -1883,6 +2034,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 const cancelBtn = e.target.closest('.mdb-cancel-btn');
 
                 if (editBtn) {
+                    if (!canEditRecords()) { alert('⚠️ You do not have edit permission.'); return; }
                     const code = editBtn.dataset.code;
                     const row = document.querySelector(`#mdbTableBody tr[data-code="${CSS.escape(code)}"]`);
                     const material = allMaterials.find(m => m.material_code === code);
@@ -1914,6 +2066,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 }
 
                 if (deleteBtn) {
+                    if (!canDeleteRecords()) { alert('⚠️ You do not have delete permission.'); return; }
                     const code = deleteBtn.dataset.code;
                     if (!confirm(`Delete material "${code}"? Action will fail if linked transactions exist.`)) return;
 
@@ -1945,8 +2098,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 tr.innerHTML = `
                     <td class="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 cdb-name-cell">${escapeHtml(c.customer_name)}</td>
                     <td class="px-4 py-2 text-center whitespace-nowrap">
-                        <button class="cdb-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-name="${escapeHtml(c.customer_name)}">✏️ Edit</button>
-                        <button class="cdb-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-name="${escapeHtml(c.customer_name)}">🗑️ Delete</button>
+                        ${canEditRecords() ? `<button class="cdb-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-name="${escapeHtml(c.customer_name)}">✏️ Edit</button>` : ''}
+                        ${canDeleteRecords() ? `<button class="cdb-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-name="${escapeHtml(c.customer_name)}">🗑️ Delete</button>` : ''}
                     </td>`;
                 body.appendChild(tr);
             });
@@ -1960,6 +2113,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 const cancelBtn = e.target.closest('.cdb-cancel-btn');
 
                 if (editBtn) {
+                    if (!canEditRecords()) { alert('⚠️ You do not have edit permission.'); return; }
                     const name = editBtn.dataset.name;
                     const row = document.querySelector(`#cdbTableBody tr[data-name="${CSS.escape(name)}"]`);
                     if (!row) return;
@@ -1990,6 +2144,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 }
 
                 if (deleteBtn) {
+                    if (!canDeleteRecords()) { alert('⚠️ You do not have delete permission.'); return; }
                     const name = deleteBtn.dataset.name;
                     if (!confirm(`Delete customer "${name}"? Action will fail if linked transactions exist.`)) return;
 
@@ -2249,8 +2404,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     <td class="px-3 py-3 text-center">${statusBadge}</td>
                     <td class="px-3 py-3 text-slate-500 dark:text-slate-400 max-w-[160px] truncate" title="${escapeHtml(item.remarks || '')}">${remarksPreview}</td>
                     <td class="px-3 py-3 text-center whitespace-nowrap">
-                        <button class="ledger-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-id="${item.id}">✏️ Edit</button>
-                        <button class="ledger-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-id="${item.id}">🗑️</button>
+                        ${canEditRecords() ? `<button class="ledger-edit-btn text-blue-600 dark:text-blue-400 hover:underline font-bold mr-3" data-id="${item.id}">✏️ Edit</button>` : ''}
+                        ${canDeleteRecords() ? `<button class="ledger-delete-btn text-red-600 dark:text-red-400 hover:underline font-bold" data-id="${item.id}">🗑️</button>` : ''}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -2273,10 +2428,12 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 const deleteBtn = e.target.closest('.ledger-delete-btn');
 
                 if (editBtn) {
+                    if (!canEditRecords()) { alert('⚠️ You do not have edit permission.'); return; }
                     const item = currentLedgerData.find(r => r.id === parseInt(editBtn.dataset.id, 10));
                     if (item) openEditModal(item);
                 }
                 if (deleteBtn) {
+                    if (!canDeleteRecords()) { alert('⚠️ You do not have delete permission.'); return; }
                     deleteReservationRow(parseInt(deleteBtn.dataset.id, 10));
                 }
             });
@@ -2588,7 +2745,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             }
 
             const stamp = new Date().toLocaleString();
-            const currentUser = sessionStorage.getItem(AUTH_SESSION_KEY) || 'user';
+            const currentUser = (currentUserRecord && currentUserRecord.username) || 'user';
             const note = `[${stamp} — ${currentUser} — FEFO Reason: ${reasonText}]`;
 
             const originalLabel = btn.textContent;
@@ -2791,15 +2948,23 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         // FEFO REASON MANAGEMENT (Admin-managed remark quick-picks)
         // ============================================================
         function isAdminUser() {
-            const user = sessionStorage.getItem(AUTH_SESSION_KEY) || '';
-            return user.trim().toLowerCase() === 'admin';
+            return !!(currentUserRecord && currentUserRecord.is_admin);
+        }
+
+        // Per-account permissions assigned via the User Management panel. Admins
+        // always have both, regardless of what's stored on their row.
+        function canEditRecords() {
+            return isAdminUser() || !!(currentUserRecord && currentUserRecord.can_edit);
+        }
+        function canDeleteRecords() {
+            return isAdminUser() || !!(currentUserRecord && currentUserRecord.can_delete);
         }
 
         // whsefl is allowed into the Live Task Checklist but is restricted to ticking/
         // unticking Task Done only — the Printed checkbox (and its mass-edit buttons)
         // stay locked for this user.
         function isPrintedCheckboxRestrictedUser() {
-            const user = sessionStorage.getItem(AUTH_SESSION_KEY) || '';
+            const user = (currentUserRecord && currentUserRecord.username) || '';
             return user.trim().toLowerCase() === 'whsefl';
         }
 
@@ -3153,6 +3318,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('editStatus').value = (item.status || 'UNDELIVERED').toUpperCase();
             document.getElementById('editRemarks').value = item.remarks || '';
 
+            document.getElementById('editModalSaveBtn')?.classList.toggle('hidden', !canEditRecords());
+            document.getElementById('editModalDeleteBtn')?.classList.toggle('hidden', !canDeleteRecords());
+
             const modal = document.getElementById('editReservationModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -3171,7 +3339,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('editAppendNoteBtn').addEventListener('click', () => {
                 const ta = document.getElementById('editRemarks');
                 const stamp = new Date().toLocaleString();
-                const currentUser = sessionStorage.getItem(AUTH_SESSION_KEY) || 'user';
+                const currentUser = (currentUserRecord && currentUserRecord.username) || 'user';
                 const prefix = ta.value.trim() ? '\n' : '';
                 ta.value += `${prefix}[${stamp} — ${currentUser}] `;
                 ta.focus();
@@ -3179,6 +3347,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             });
 
             document.getElementById('editModalSaveBtn').addEventListener('click', async () => {
+                if (!canEditRecords()) { alert('⚠️ You do not have edit permission.'); return; }
                 const id = parseInt(document.getElementById('editRecordId').value, 10);
                 const salesOrder = document.getElementById('editSalesOrder').value.trim();
                 const picklist = document.getElementById('editPicklist').value.trim();
@@ -3235,6 +3404,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             });
 
             document.getElementById('editModalDeleteBtn').addEventListener('click', async () => {
+                if (!canDeleteRecords()) { alert('⚠️ You do not have delete permission.'); return; }
                 const id = parseInt(document.getElementById('editRecordId').value, 10);
                 if (!confirm("Confirm removal of this transaction booking record? Action cannot be reverted.")) return;
 
@@ -3245,6 +3415,202 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 }
                 closeEditModal();
                 loadAllReservationsLedger();
+            });
+        }
+
+        // ============================================================
+        // USER MANAGEMENT MODULE (Admin-only)
+        // Accounts live in the Supabase "app_users" table. Admins can add/edit/
+        // delete accounts, assign which sidebar tabs each account can see, and
+        // toggle per-account Can Edit / Can Delete permissions.
+        // ============================================================
+        let userMgmtEditingId = null; // null = "add new" mode, otherwise editing this row's id
+        let userMgmtCache = [];
+
+        function renderUserMgmtTabCheckboxes(selectedIds) {
+            const container = document.getElementById('userMgmtTabsList');
+            const selected = selectedIds || [];
+            container.innerHTML = ALL_TABS.map(t => `
+                <label class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+                    <input type="checkbox" class="userMgmtTabCheckbox w-3.5 h-3.5 accent-blue-600 cursor-pointer" value="${t.id}" ${selected.includes(t.id) ? 'checked' : ''}>
+                    ${escapeHtml(t.label)}
+                </label>
+            `).join('');
+        }
+
+        function resetUserMgmtForm() {
+            userMgmtEditingId = null;
+            document.getElementById('userMgmtFormTitle').textContent = 'Add New Account';
+            document.getElementById('userMgmtEditId').value = '';
+            document.getElementById('userMgmtUsername').value = '';
+            document.getElementById('userMgmtUsername').disabled = false;
+            document.getElementById('userMgmtPassword').value = '';
+            document.getElementById('userMgmtPassword').placeholder = 'Password';
+            document.getElementById('userMgmtIsAdmin').checked = false;
+            document.getElementById('userMgmtCanEdit').checked = false;
+            document.getElementById('userMgmtCanDelete').checked = false;
+            document.getElementById('userMgmtFormError').textContent = '';
+            document.getElementById('userMgmtCancelEditBtn').classList.add('hidden');
+            document.getElementById('userMgmtSaveBtn').textContent = '💾 Save Account';
+            renderUserMgmtTabCheckboxes([]);
+        }
+
+        function renderUserMgmtList() {
+            const listEl = document.getElementById('userMgmtList');
+            if (userMgmtCache.length === 0) {
+                listEl.innerHTML = '<p class="text-xs text-slate-400 italic px-1">No managed accounts yet — the bootstrap admin account always works regardless.</p>';
+                return;
+            }
+            listEl.innerHTML = userMgmtCache.map(u => {
+                const tabsLabel = (Array.isArray(u.allowed_tabs) && u.allowed_tabs.length > 0)
+                    ? u.allowed_tabs.map(id => (ALL_TABS.find(t => t.id === id) || {}).label || id).join(', ')
+                    : 'All tabs';
+                const badges = [
+                    u.is_admin ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">ADMIN</span>' : '',
+                    u.can_edit ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">CAN EDIT</span>' : '',
+                    u.can_delete ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">CAN DELETE</span>' : ''
+                ].join(' ');
+                return `
+                    <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-xs font-bold text-slate-900 dark:text-white">${escapeHtml(u.username)}</span>
+                                ${badges}
+                            </div>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Tabs: ${escapeHtml(tabsLabel)}</p>
+                        </div>
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            <button data-id="${u.id}" data-role="userMgmtEdit" class="text-blue-600 dark:text-blue-400 hover:underline text-[11px] font-bold">✏️ Edit</button>
+                            <button data-id="${u.id}" data-role="userMgmtDelete" class="text-red-600 dark:text-red-400 hover:underline text-[11px] font-bold">🗑️ Delete</button>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            listEl.querySelectorAll('[data-role="userMgmtEdit"]').forEach(btn => {
+                btn.addEventListener('click', () => startEditUserMgmt(parseInt(btn.dataset.id, 10)));
+            });
+            listEl.querySelectorAll('[data-role="userMgmtDelete"]').forEach(btn => {
+                btn.addEventListener('click', () => deleteUserMgmtAccount(parseInt(btn.dataset.id, 10)));
+            });
+        }
+
+        async function loadUserMgmtList() {
+            const listEl = document.getElementById('userMgmtList');
+            listEl.innerHTML = '<p class="text-xs text-slate-400 italic px-1">Loading users…</p>';
+            const { data, error } = await _supabase.from(USERS_TABLE).select('*').order('username', { ascending: true });
+            if (error) {
+                listEl.innerHTML = `<p class="text-xs text-red-500 px-1">❌ Failed to load users: ${escapeHtml(error.message)}</p>`;
+                return;
+            }
+            userMgmtCache = data || [];
+            renderUserMgmtList();
+        }
+
+        function startEditUserMgmt(id) {
+            const u = userMgmtCache.find(r => r.id === id);
+            if (!u) return;
+            userMgmtEditingId = id;
+            document.getElementById('userMgmtFormTitle').textContent = `Edit Account — ${u.username}`;
+            document.getElementById('userMgmtEditId').value = id;
+            document.getElementById('userMgmtUsername').value = u.username;
+            document.getElementById('userMgmtUsername').disabled = true; // keep usernames stable once created
+            document.getElementById('userMgmtPassword').value = '';
+            document.getElementById('userMgmtPassword').placeholder = 'Leave blank to keep current password';
+            document.getElementById('userMgmtIsAdmin').checked = !!u.is_admin;
+            document.getElementById('userMgmtCanEdit').checked = !!u.can_edit;
+            document.getElementById('userMgmtCanDelete').checked = !!u.can_delete;
+            document.getElementById('userMgmtFormError').textContent = '';
+            document.getElementById('userMgmtCancelEditBtn').classList.remove('hidden');
+            document.getElementById('userMgmtSaveBtn').textContent = '💾 Update Account';
+            renderUserMgmtTabCheckboxes(Array.isArray(u.allowed_tabs) ? u.allowed_tabs : []);
+            document.getElementById('userMgmtUsername').closest('.p-6').scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        async function deleteUserMgmtAccount(id) {
+            const u = userMgmtCache.find(r => r.id === id);
+            if (!u) return;
+            if (!confirm(`Delete account "${u.username}"? This cannot be undone.`)) return;
+            const { error } = await _supabase.from(USERS_TABLE).delete().eq('id', id);
+            if (error) {
+                alert(`❌ Failed to delete account: ${error.message}`);
+                return;
+            }
+            if (userMgmtEditingId === id) resetUserMgmtForm();
+            await loadUserMgmtList();
+        }
+
+        function setupUserMgmtUI() {
+            const modal = document.getElementById('userMgmtModal');
+            const openBtn = document.getElementById('manageUsersBtn');
+            const closeBtn = document.getElementById('userMgmtCloseBtn');
+            const cancelEditBtn = document.getElementById('userMgmtCancelEditBtn');
+            const saveBtn = document.getElementById('userMgmtSaveBtn');
+
+            function openModal() {
+                if (!isAdminUser()) return;
+                resetUserMgmtForm();
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                loadUserMgmtList();
+            }
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            openBtn?.addEventListener('click', openModal);
+            closeBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => { if (e.target.id === 'userMgmtModal') closeModal(); });
+            cancelEditBtn.addEventListener('click', resetUserMgmtForm);
+
+            saveBtn.addEventListener('click', async () => {
+                if (!isAdminUser()) return;
+                const errEl = document.getElementById('userMgmtFormError');
+                errEl.textContent = '';
+
+                const username = document.getElementById('userMgmtUsername').value.trim();
+                const password = document.getElementById('userMgmtPassword').value;
+                const isAdmin = document.getElementById('userMgmtIsAdmin').checked;
+                const canEdit = document.getElementById('userMgmtCanEdit').checked;
+                const canDelete = document.getElementById('userMgmtCanDelete').checked;
+                const selectedTabs = Array.from(document.querySelectorAll('.userMgmtTabCheckbox:checked')).map(cb => cb.value);
+
+                if (!username) { errEl.textContent = '⚠️ Username is required.'; return; }
+                if (username.toLowerCase() === BOOTSTRAP_ADMIN.username && !userMgmtEditingId) {
+                    errEl.textContent = '⚠️ "admin" is reserved for the built-in bootstrap account.';
+                    return;
+                }
+                if (!userMgmtEditingId && !password) { errEl.textContent = '⚠️ Password is required for a new account.'; return; }
+
+                saveBtn.disabled = true;
+                try {
+                    if (userMgmtEditingId) {
+                        const payload = {
+                            is_admin: isAdmin,
+                            can_edit: canEdit,
+                            can_delete: canDelete,
+                            allowed_tabs: selectedTabs.length > 0 ? selectedTabs : null
+                        };
+                        if (password) payload.password = password;
+                        const { error } = await _supabase.from(USERS_TABLE).update(payload).eq('id', userMgmtEditingId);
+                        if (error) { errEl.textContent = `❌ ${error.message}`; return; }
+                    } else {
+                        const payload = {
+                            username,
+                            password,
+                            is_admin: isAdmin,
+                            can_edit: canEdit,
+                            can_delete: canDelete,
+                            allowed_tabs: selectedTabs.length > 0 ? selectedTabs : null
+                        };
+                        const { error } = await _supabase.from(USERS_TABLE).insert(payload);
+                        if (error) { errEl.textContent = `❌ ${error.message}`; return; }
+                    }
+                    resetUserMgmtForm();
+                    await loadUserMgmtList();
+                } finally {
+                    saveBtn.disabled = false;
+                }
             });
         }
 
@@ -3808,8 +4174,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             // up silently unwired if something earlier in setup ever fails.
             tbody.querySelectorAll('.taskRowEditBtn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    if (!isAdminUser()) {
-                        alert('⚠️ Only the admin account can edit full records.');
+                    if (!canEditRecords()) {
+                        alert('⚠️ You do not have edit permission.');
                         return;
                     }
                     openTaskRowEditModal(parseInt(btn.dataset.id, 10));
@@ -3818,22 +4184,23 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
             // Bound directly per-row (same pattern as the edit pencil above) so the
             // delete button is never left unwired even if delegated setup fails.
-            // The button itself is only visible in admin-edit-mode (CSS), and this
-            // handler double-checks isAdminUser() as well — so accounts like whsefl
-            // never see it and can never trigger it directly either.
+            // The button itself is only visible in delete-perm-mode (CSS), and this
+            // handler double-checks canDeleteRecords() as well — so accounts without
+            // delete permission never see it and can never trigger it directly either.
             tbody.querySelectorAll('.taskRowDeleteBtn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    if (!isAdminUser()) {
-                        alert('⚠️ Only the admin account can delete records.');
+                    if (!canDeleteRecords()) {
+                        alert('⚠️ You do not have delete permission.');
                         return;
                     }
                     deleteTaskRow(parseInt(btn.dataset.id, 10));
                 });
             });
 
-            // Admin-only visibility for the timestamp-edit pencils (delegated click handler is
-            // wired once in setupTaskTimeEditModal(), so we only need to show/hide here).
-            tbody.classList.toggle('admin-edit-mode', isAdminUser());
+            // Show/hide the edit and delete affordances (timestamp pencils, row-edit,
+            // row-delete) based on this account's assigned permissions.
+            tbody.classList.toggle('edit-perm-mode', canEditRecords());
+            tbody.classList.toggle('delete-perm-mode', canDeleteRecords());
         }
 
         // ============================================================
@@ -3846,7 +4213,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             countEl.textContent = taskSelectedIds.size;
             bar.classList.toggle('hidden', taskSelectedIds.size === 0);
             document.querySelectorAll('.adminOnlyMassBtn').forEach(btn => {
-                btn.classList.toggle('hidden', !isAdminUser());
+                btn.classList.toggle('hidden', !canEditRecords());
             });
         }
 
@@ -3995,7 +4362,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         // ids: array of one (single-row pencil) or many (mass edit) record ids
         function openTaskTimeEditModal(ids, statusField, timeField, timeCellClass) {
             try {
-                if (!isAdminUser()) return;
+                if (!canEditRecords()) return;
                 if (!ids || ids.length === 0) return;
                 taskTimeEditCtx = { ids: ids.map(id => parseInt(id, 10)), statusField, timeField, timeCellClass };
 
@@ -4105,8 +4472,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('taskRecordTableBody').addEventListener('click', (e) => {
                 const btn = e.target.closest('.taskTimeEditBtn');
                 if (!btn) return;
-                if (!isAdminUser()) {
-                    alert('⚠️ Only the admin account can edit timestamps.');
+                if (!canEditRecords()) {
+                    alert('⚠️ You do not have edit permission.');
                     return;
                 }
                 openTaskTimeEditModal(
@@ -4117,15 +4484,15 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 );
             });
 
-            // Admin-only mass timestamp edit — applies the same date & time to every
-            // currently selected row's Printed or Task Done checkpoint.
+            // Mass timestamp edit (requires edit permission) — applies the same date &
+            // time to every currently selected row's Printed or Task Done checkpoint.
             document.getElementById('taskMassSetPrintedTimeBtn').addEventListener('click', () => {
-                if (!isAdminUser()) { alert('⚠️ Only the admin account can edit timestamps.'); return; }
+                if (!canEditRecords()) { alert('⚠️ You do not have edit permission.'); return; }
                 if (taskSelectedIds.size === 0) { alert('⚠️ Select at least one row first.'); return; }
                 openTaskTimeEditModal(Array.from(taskSelectedIds), 'printed', 'time_printed', 'timePrintedCell');
             });
             document.getElementById('taskMassSetDoneTimeBtn').addEventListener('click', () => {
-                if (!isAdminUser()) { alert('⚠️ Only the admin account can edit timestamps.'); return; }
+                if (!canEditRecords()) { alert('⚠️ You do not have edit permission.'); return; }
                 if (taskSelectedIds.size === 0) { alert('⚠️ Select at least one row first.'); return; }
                 openTaskTimeEditModal(Array.from(taskSelectedIds), 'task', 'time_task_done', 'timeTaskDoneCell');
             });
@@ -4149,7 +4516,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         function openTaskRowEditModal(id) {
             try {
-                if (!isAdminUser()) return;
+                if (!canEditRecords()) return;
                 const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
                 const row = taskRecordRows.find(r => r.id === id);
                 if (!row) { alert('❌ Could not find that record — try reloading the checklist.'); return; }
@@ -4201,7 +4568,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         // ADMIN: Delete a single Live Task Checklist record
         // ============================================================
         async function deleteTaskRow(id) {
-            if (!isAdminUser()) return;
+            if (!canDeleteRecords()) return;
             const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
             if (!confirm(`Confirm removal of this ${cfg.label} record? Action cannot be undone.`)) return;
             try {

@@ -820,6 +820,7 @@
                                         <th class="px-3 py-3.5 w-8"><input type="checkbox" id="taskRecordSelectAll" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer"></th>
                                         <th class="px-3 py-3.5 w-8">Edit</th>
                                         <th class="px-3 py-3.5">Date</th>
+                                        <th class="px-3 py-3.5" id="taskExtraColHeader">W. ORDER</th>
                                         <th class="px-3 py-3.5">Reference / SKU</th>
                                         <th class="px-3 py-3.5">Storage</th>
                                         <th class="px-3 py-3.5">Batch</th>
@@ -828,13 +829,11 @@
                                         <th class="px-3 py-3.5 text-center">Printed</th>
                                         <th class="px-3 py-3.5 text-center">Task Done</th>
                                         <th class="px-3 py-3.5">Executed By</th>
-                                        <th class="px-3 py-3.5">Time Printed</th>
-                                        <th class="px-3 py-3.5">Time Task Done</th>
                                     </tr>
                                 </thead>
                                 <tbody id="taskRecordTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                                     <tr>
-                                        <td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
+                                        <td colspan="12" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Click "Load Records" to view the checklist.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -3242,6 +3241,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 storageField: 'storage',
                 batchField: 'batch',
                 qtyField: 'qty',
+                extraField: 'w_order',
+                extraHeader: 'W. ORDER',
                 columns: ['created_on','w_order','area','storage','product','product_short_desc','batch','qty','um','username','picking','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['Created On','W. ORDER','AREA','STORAGE','Product','Product Short Description','Batch','QTY','UM','USERNAME','PICKING','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             },
@@ -3256,6 +3257,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 storageField: 'destination',
                 batchField: 'batch',
                 qtyField: 'qty',
+                extraField: 'material_doc',
+                extraHeader: 'Material Doc',
                 columns: ['posting_date','pick_time','material_doc','material','description','destination','area','mvt','qty','um','batch','username','printed','time_printed','task','time_task_done','column1','executed_by'],
                 headers: ['Posting Date','Time','Material Doc','Material','Description','DESTINATION','AREA','MVT','QTY','UM','BATCH','UserName','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','Column1','EXECUTED BY']
             },
@@ -3270,6 +3273,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 storageField: null,
                 batchField: null,
                 qtyField: 'qty',
+                extraField: 'w_o',
+                extraHeader: 'W.O',
                 columns: ['activity_date','so_number','obd_no','rdd','customer','sku','qty','area','latest_served','w_o','printed','time_printed','task','time_task_done','executed_by'],
                 headers: ['DATE','S.O','OBD NO.','RDD','CUSTOMER','SKU','QTY','AREA','LATEST SERVED','W.O','PRINTED','TIME PRINTED','TASK','TIME TASK DONE','EXECUTED BY']
             }
@@ -3414,6 +3419,59 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             wrap.classList.remove('hidden');
         }
 
+        // ============================================================
+        // DUPLICATE PREVENTION — a pasted row is a "duplicate" when every
+        // data column matches an already-existing record (or another row
+        // already in the same paste batch). Status/execution columns
+        // (printed, task, their timestamps, executed_by) are ignored for
+        // this comparison since they naturally differ / start empty.
+        // ============================================================
+        const DUP_IGNORE_COLUMNS = ['printed', 'time_printed', 'task', 'time_task_done', 'executed_by'];
+
+        function dupCompareColumns(cfg) {
+            return cfg.columns.filter(c => !DUP_IGNORE_COLUMNS.includes(c));
+        }
+
+        function rowDupKey(row, cols) {
+            return cols.map(c => {
+                const v = row[c];
+                return (v === null || v === undefined) ? '' : String(v).trim().toUpperCase();
+            }).join('§');
+        }
+
+        // Filters out rows that already exist in the target table (matched on every
+        // data column) and rows that duplicate an earlier row in the same batch —
+        // keeping only the first occurrence of each unique record.
+        async function dedupeTaskRows(type, rows) {
+            const cfg = TASK_TYPE_CONFIG[type];
+            const cols = dupCompareColumns(cfg);
+
+            let existing = [];
+            try {
+                existing = await fetchAllRowsChecked(cfg.table, cols.join(','));
+            } catch (err) {
+                console.error('dedupeTaskRows: failed to fetch existing records for duplicate check:', err);
+                throw new Error('Could not verify duplicates against existing records: ' + err.message);
+            }
+
+            const existingKeys = new Set(existing.map(r => rowDupKey(r, cols)));
+            const seenInBatch = new Set();
+            const uniqueRows = [];
+            let duplicateCount = 0;
+
+            rows.forEach(row => {
+                const key = rowDupKey(row, cols);
+                if (existingKeys.has(key) || seenInBatch.has(key)) {
+                    duplicateCount++;
+                    return;
+                }
+                seenInBatch.add(key);
+                uniqueRows.push(row);
+            });
+
+            return { uniqueRows, duplicateCount };
+        }
+
         async function saveTaskRows(type, rows) {
             const cfg = TASK_TYPE_CONFIG[type];
             const chunkSize = 500;
@@ -3437,12 +3495,13 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         function renderTaskSaveResult(result) {
             const box = document.getElementById('taskSaveResult');
             box.classList.remove('hidden');
+            const dupNote = result.duplicatesSkipped ? ` ⏭️ ${result.duplicatesSkipped} duplicate row(s) skipped (already existed).` : '';
             if (result.failed === 0) {
                 box.className = 'text-xs border rounded-lg p-3 mt-3 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 font-semibold';
-                box.textContent = `✅ Saved ${result.inserted} record(s) successfully.`;
+                box.textContent = `✅ Saved ${result.inserted} record(s) successfully.${dupNote}`;
             } else {
                 box.className = 'text-xs border rounded-lg p-3 mt-3 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 font-semibold';
-                box.textContent = `⚠️ Saved ${result.inserted} record(s), ${result.failed} failed. ${result.firstError ? 'Error: ' + result.firstError : ''}`;
+                box.textContent = `⚠️ Saved ${result.inserted} record(s), ${result.failed} failed. ${result.firstError ? 'Error: ' + result.firstError : ''}${dupNote}`;
             }
         }
 
@@ -3491,13 +3550,40 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('taskSaveBtn').addEventListener('click', async () => {
                 if (!taskParsedRows || taskParsedRows.length === 0) return;
                 const cfg = TASK_TYPE_CONFIG[taskActiveType];
-                if (!confirm(`Save ${taskParsedRows.length} ${cfg.label} record(s) to the Task Execution Log?`)) return;
 
                 const saveBtn = document.getElementById('taskSaveBtn');
                 saveBtn.disabled = true;
-                saveBtn.textContent = '⏳ Saving...';
+                saveBtn.textContent = '⏳ Checking for duplicates...';
 
-                const result = await saveTaskRows(taskActiveType, taskParsedRows);
+                let uniqueRows, duplicateCount;
+                try {
+                    ({ uniqueRows, duplicateCount } = await dedupeTaskRows(taskActiveType, taskParsedRows));
+                } catch (err) {
+                    alert(`❌ ${err.message}`);
+                    saveBtn.textContent = '💾 Save to Log';
+                    saveBtn.disabled = false;
+                    return;
+                }
+
+                if (uniqueRows.length === 0) {
+                    alert(`⚠️ All ${taskParsedRows.length} row(s) already exist in the log (every field matches an existing record) — nothing new to save.`);
+                    saveBtn.textContent = '💾 Save to Log';
+                    saveBtn.disabled = false;
+                    return;
+                }
+
+                const confirmMsg = duplicateCount > 0
+                    ? `Save ${uniqueRows.length} ${cfg.label} record(s) to the Task Execution Log?\n\n(${duplicateCount} duplicate row(s) already existing will be skipped.)`
+                    : `Save ${uniqueRows.length} ${cfg.label} record(s) to the Task Execution Log?`;
+                if (!confirm(confirmMsg)) {
+                    saveBtn.textContent = '💾 Save to Log';
+                    saveBtn.disabled = false;
+                    return;
+                }
+
+                saveBtn.textContent = '⏳ Saving...';
+                const result = await saveTaskRows(taskActiveType, uniqueRows);
+                result.duplicatesSkipped = duplicateCount;
                 renderTaskSaveResult(result);
 
                 saveBtn.textContent = '💾 Save to Log';
@@ -3568,7 +3654,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         async function loadTaskRecordChecklist() {
             const cfg = TASK_TYPE_CONFIG[taskRecordActiveType];
             const tbody = document.getElementById('taskRecordTableBody');
-            tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
+            const extraHeaderEl = document.getElementById('taskExtraColHeader');
+            if (extraHeaderEl) extraHeaderEl.textContent = cfg.extraHeader;
+            tbody.innerHTML = `<tr><td colspan="12" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">Loading ${cfg.label} records...</td></tr>`;
 
             const selectCols = `id,${cfg.columns.join(',')}`;
             let rows;
@@ -3576,7 +3664,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 rows = await fetchAllRowsChecked(cfg.table, selectCols);
             } catch (err) {
                 console.error('loadTaskRecordChecklist failed:', err);
-                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="px-3 py-8 text-center text-red-500 italic bg-red-50/50 dark:bg-red-950/20">❌ Failed to load ${cfg.label} records: ${escapeHtml(err.message)}</td></tr>`;
                 alert(`❌ Failed to load ${cfg.label} records:\n${err.message}\n\nThis usually means the "${cfg.areaField}" (or another selected) column doesn't exist yet on the "${cfg.table}" table.`);
                 return;
             }
@@ -3631,7 +3719,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             if (selectAllCb) selectAllCb.checked = false;
 
             if (!rows || rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="px-3 py-8 text-center text-slate-400 italic bg-slate-50/50 dark:bg-slate-950/20">No ${cfg.label} records found.</td></tr>`;
                 return;
             }
 
@@ -3654,6 +3742,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                         <button type="button" class="taskRowEditBtn text-[11px] text-blue-500 hover:text-blue-700" data-id="${r.id}" title="Admin: edit full record">✏️</button>
                     </td>
                     <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${escapeHtml(r[cfg.dateField])}</td>
+                    <td class="px-3 py-2.5">${cfg.extraField ? escapeHtml(r[cfg.extraField]) : ''}</td>
                     <td class="px-3 py-2.5">${identifierHtml}</td>
                     <td class="px-3 py-2.5">${cfg.storageField ? escapeHtml(r[cfg.storageField]) : ''}</td>
                     <td class="px-3 py-2.5">${cfg.batchField ? escapeHtml(r[cfg.batchField]) : ''}</td>
@@ -3667,12 +3756,6 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     </td>
                     <td class="px-3 py-2.5">
                         <input type="text" class="taskExecutedByInput w-28 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 focus:border-blue-400 bg-transparent focus:bg-white dark:focus:bg-slate-800 text-xs rounded px-1.5 py-1 text-slate-700 dark:text-slate-300 focus:outline-none" data-id="${r.id}" value="${executedByVal}" placeholder="Name" title="Enter who executed this task">
-                    </td>
-                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        <span class="timePrintedCell">${escapeHtml(r.time_printed)}</span>
-                    </td>
-                    <td class="px-3 py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        <span class="timeTaskDoneCell">${escapeHtml(r.time_task_done)}</span>
                     </td>
                 </tr>`;
             }).join('');

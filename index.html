@@ -3472,7 +3472,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 listEl.innerHTML = '<p class="text-xs text-slate-400 italic px-1">No managed accounts yet — the bootstrap admin account always works regardless.</p>';
                 return;
             }
-            listEl.innerHTML = userMgmtCache.map(u => {
+            listEl.innerHTML = userMgmtCache.map((u, idx) => {
                 const tabsLabel = (Array.isArray(u.allowed_tabs) && u.allowed_tabs.length > 0)
                     ? u.allowed_tabs.map(id => (ALL_TABS.find(t => t.id === id) || {}).label || id).join(', ')
                     : 'All tabs';
@@ -3491,17 +3491,17 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                             <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Tabs: ${escapeHtml(tabsLabel)}</p>
                         </div>
                         <div class="flex items-center gap-3 flex-shrink-0">
-                            <button data-id="${u.id}" data-role="userMgmtEdit" class="text-blue-600 dark:text-blue-400 hover:underline text-[11px] font-bold">✏️ Edit</button>
-                            <button data-id="${u.id}" data-role="userMgmtDelete" class="text-red-600 dark:text-red-400 hover:underline text-[11px] font-bold">🗑️ Delete</button>
+                            <button data-index="${idx}" data-role="userMgmtEdit" class="text-blue-600 dark:text-blue-400 hover:underline text-[11px] font-bold">✏️ Edit</button>
+                            <button data-index="${idx}" data-role="userMgmtDelete" class="text-red-600 dark:text-red-400 hover:underline text-[11px] font-bold">🗑️ Delete</button>
                         </div>
                     </div>`;
             }).join('');
 
             listEl.querySelectorAll('[data-role="userMgmtEdit"]').forEach(btn => {
-                btn.addEventListener('click', () => startEditUserMgmt(btn.dataset.id));
+                btn.addEventListener('click', () => startEditUserMgmt(Number(btn.dataset.index)));
             });
             listEl.querySelectorAll('[data-role="userMgmtDelete"]').forEach(btn => {
-                btn.addEventListener('click', () => deleteUserMgmtAccount(btn.dataset.id));
+                btn.addEventListener('click', () => deleteUserMgmtAccount(Number(btn.dataset.index)));
             });
         }
 
@@ -3517,12 +3517,12 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             renderUserMgmtList();
         }
 
-        function startEditUserMgmt(id) {
-            const u = userMgmtCache.find(r => String(r.id) === String(id));
-            if (!u) { console.error('[startEditUserMgmt] no cached user matched id:', id, userMgmtCache); return; }
+        function startEditUserMgmt(index) {
+            const u = userMgmtCache[index];
+            if (!u) { console.error('[startEditUserMgmt] no cached user at index:', index, userMgmtCache); return; }
             userMgmtEditingId = u.id; // keep the original value/type as returned by Supabase
             document.getElementById('userMgmtFormTitle').textContent = `Edit Account — ${u.username}`;
-            document.getElementById('userMgmtEditId').value = id;
+            document.getElementById('userMgmtEditId').value = u.id;
             document.getElementById('userMgmtUsername').value = u.username;
             document.getElementById('userMgmtUsername').disabled = true; // keep usernames stable once created
             document.getElementById('userMgmtPassword').value = '';
@@ -3537,8 +3537,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('userMgmtUsername').closest('.p-6').scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
 
-        async function deleteUserMgmtAccount(id) {
-            const u = userMgmtCache.find(r => String(r.id) === String(id));
+        async function deleteUserMgmtAccount(index) {
+            const u = userMgmtCache[index];
             if (!u) return;
             if (!confirm(`Delete account "${u.username}"? This cannot be undone.`)) return;
             const { error } = await _supabase.from(USERS_TABLE).delete().eq('id', u.id);
@@ -3546,7 +3546,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 alert(`❌ Failed to delete account: ${error.message}`);
                 return;
             }
-            if (String(userMgmtEditingId) === String(id)) resetUserMgmtForm();
+            if (String(userMgmtEditingId) === String(u.id)) resetUserMgmtForm();
             await loadUserMgmtList();
         }
 
@@ -3592,6 +3592,14 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     return;
                 }
                 if (!userMgmtEditingId && !password) { errEl.textContent = '⚠️ Password is required for a new account.'; return; }
+
+                if (userMgmtEditingId === undefined || userMgmtEditingId === null) {
+                    // Editing mode was entered but the underlying row has no id — this would
+                    // silently fail (or worse, update the wrong row). Surface it instead.
+                    console.error('[userMgmt save] userMgmtEditingId is missing while in edit mode. userMgmtCache:', userMgmtCache);
+                    errEl.textContent = '⚠️ Could not identify this account\'s row (missing id). Check console — the app_users table may be missing/misnaming its id column.';
+                    return;
+                }
 
                 saveBtn.disabled = true;
                 try {

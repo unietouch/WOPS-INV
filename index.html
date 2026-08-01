@@ -44,6 +44,11 @@
         .sidebar-transition {
             transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        /* Actually shrink the sidebar when collapsed — this was missing, which is
+           why "collapsed" only centered the icons without narrowing the panel. */
+        #sidebar.collapsed {
+            width: 4.5rem;
+        }
         /* Handle sidebar text hiding elegantly */
         #sidebar.collapsed .sidebar-text {
             display: none;
@@ -897,13 +902,13 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-3 mt-3">
                             <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400"><span class="w-2.5 h-2.5 rounded-sm bg-blue-400"></span>Printed</span>
-                            <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>Pending (Printed − Done)</span>
+                            <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>Pending (backlog carried forward until Done)</span>
                             <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-400"></span>Done</span>
                             <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400"><span class="w-2.5 h-2.5 rounded-sm bg-red-400"></span>Fill Rate &lt;50%</span>
                             <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>Fill Rate 50–79%</span>
                             <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-400"></span>Fill Rate ≥80%</span>
                         </div>
-                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-semibold">Each checkpoint counts records whose Time Printed / Time Task Done falls on the report date, at or before that checkpoint. 12:00 AM reflects the full day total. Fill Rate = Done ÷ Printed at that checkpoint.</p>
+                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-semibold">Printed / Done count activity that happened on the report date, at or before that checkpoint. Pending is cumulative — any record printed on or before that checkpoint (including earlier dates) that is still not Done counts as pending, so backlog carries forward day to day until it's completed. 12:00 AM reflects the full day total. Fill Rate = Done ÷ Printed at that checkpoint.</p>
                     </div>
 
                     <!-- Consolidated Summary Panel -->
@@ -4248,6 +4253,14 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             return new Date(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
         }
 
+        // Returns the exact cutoff Date for a given report date + checkpoint
+        // (12:00 AM checkpoint rolls over to the following day's midnight).
+        function checkpointCutoff(y, m, d, checkpoint) {
+            return checkpoint.hour === 24
+                ? new Date(y, m - 1, d + 1, 0, 0, 0)
+                : new Date(y, m - 1, d, checkpoint.hour, checkpoint.minute, 0);
+        }
+
         async function generateCheckpointReport() {
             const tbody = document.getElementById('taskReportTableBody');
             const reportDateStr = document.getElementById('taskReportDate').value;
@@ -4276,9 +4289,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             // so we don't pre-fill 0/0/0/— for a time slot that hasn't arrived.
             const phNow = getPHNowAsNaiveDate();
             const checkpointReached = REPORT_CHECKPOINTS.map(cp => {
-                const cutoff = cp.hour === 24
-                    ? new Date(ry, rm - 1, rd + 1, 0, 0, 0)
-                    : new Date(ry, rm - 1, rd, cp.hour, cp.minute, 0);
+                const cutoff = checkpointCutoff(ry, rm, rd, cp);
                 return phNow >= cutoff;
             });
 
@@ -4286,7 +4297,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             const areaMap = {};
             function ensureArea(name) {
                 if (!areaMap[name]) {
-                    areaMap[name] = REPORT_CHECKPOINTS.map(() => ({ printed: 0, done: 0 }));
+                    areaMap[name] = REPORT_CHECKPOINTS.map(() => ({ printed: 0, done: 0, pending: 0 }));
                 }
                 return areaMap[name];
             }
@@ -4296,6 +4307,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 const printedDate = isChecked(r.printed) ? parseStampDate(r.time_printed) : null;
                 const doneDate = isChecked(r.task) ? parseStampDate(r.time_task_done) : null;
 
+                // "Printed" / "Done" columns — only activity that happened ON the report date.
                 if (printedDate && sameCalendarDay(printedDate, ry, rm, rd)) {
                     const tallies = ensureArea(area);
                     REPORT_CHECKPOINTS.forEach((cp, i) => {
@@ -4306,6 +4318,21 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     const tallies = ensureArea(area);
                     REPORT_CHECKPOINTS.forEach((cp, i) => {
                         if (beforeCheckpoint(doneDate, ry, rm, rd, cp)) tallies[i].done++;
+                    });
+                }
+
+                // "Pending" — cumulative backlog, NOT limited to the report date. Any
+                // record printed on or before this checkpoint (on any earlier date too)
+                // that still isn't marked Done as of that checkpoint counts as pending,
+                // so unfinished work from previous dates keeps showing up until it's
+                // actually completed.
+                if (printedDate) {
+                    const tallies = ensureArea(area);
+                    REPORT_CHECKPOINTS.forEach((cp, i) => {
+                        const cutoff = checkpointCutoff(ry, rm, rd, cp);
+                        if (printedDate <= cutoff && (!doneDate || doneDate > cutoff)) {
+                            tallies[i].pending++;
+                        }
                     });
                 }
             });
@@ -4322,7 +4349,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     if (!checkpointReached[i]) {
                         return `<td class="px-3 py-2.5 text-right border-l border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 text-slate-300 dark:text-slate-600 italic" colspan="4" title="This checkpoint hasn't happened yet (PH time).">not yet</td>`;
                     }
-                    const pending = Math.max(t.printed - t.done, 0);
+                    const pending = t.pending;
                     const fillRate = t.printed > 0 ? (t.done / t.printed * 100) : null;
                     const fillRateLabel = fillRate === null ? '—' : `${Math.round(fillRate)}%`;
                     return `<td class="px-3 py-2.5 text-right border-l border-slate-200 dark:border-slate-700 bg-blue-50/60 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300 font-semibold">${t.printed}</td>` +
@@ -4351,10 +4378,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         }
 
         function beforeCheckpoint(date, y, m, d, checkpoint) {
-            const cutoff = checkpoint.hour === 24
-                ? new Date(y, m - 1, d + 1, 0, 0, 0)   // midnight rollover = full day
-                : new Date(y, m - 1, d, checkpoint.hour, checkpoint.minute, 0);
-            return date <= cutoff;
+            return date <= checkpointCutoff(y, m, d, checkpoint);
         }
 
         async function fetchAllRows(table, selectCols) {

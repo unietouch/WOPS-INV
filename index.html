@@ -3435,7 +3435,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         // delete accounts, assign which sidebar tabs each account can see, and
         // toggle per-account Can Edit / Can Delete permissions.
         // ============================================================
-        let userMgmtEditingId = null; // null = "add new" mode, otherwise editing this row's id
+        let userMgmtEditingUsernameKey = null; // null = "add new" mode, otherwise the username (PK) of the row being edited
         let userMgmtIsEditMode = false; // tracks edit vs add mode independently of id truthiness
         let userMgmtEditingUsername = null;
         let userMgmtCache = [];
@@ -3452,7 +3452,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         }
 
         function resetUserMgmtForm() {
-            userMgmtEditingId = null;
+            userMgmtEditingUsernameKey = null;
             userMgmtIsEditMode = false;
             userMgmtEditingUsername = null;
             document.getElementById('userMgmtFormTitle').textContent = 'Add New Account';
@@ -3524,11 +3524,11 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         function startEditUserMgmt(index) {
             const u = userMgmtCache[index];
             if (!u) { console.error('[startEditUserMgmt] no cached user at index:', index, userMgmtCache); return; }
-            userMgmtEditingId = u.id; // keep the original value/type as returned by Supabase
+            userMgmtEditingUsernameKey = u.username; // username is the actual primary key in app_users
             userMgmtIsEditMode = true;
             userMgmtEditingUsername = u.username;
             document.getElementById('userMgmtFormTitle').textContent = `Edit Account — ${u.username}`;
-            document.getElementById('userMgmtEditId').value = u.id;
+            document.getElementById('userMgmtEditId').value = u.username;
             document.getElementById('userMgmtUsername').value = u.username;
             document.getElementById('userMgmtUsername').disabled = true; // keep usernames stable once created
             document.getElementById('userMgmtPassword').value = '';
@@ -3546,13 +3546,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         async function deleteUserMgmtAccount(index) {
             const u = userMgmtCache[index];
             if (!u) return;
-            if (u.id === undefined || u.id === null) {
-                console.error('[deleteUserMgmtAccount] cached user has no id:', u);
-                alert('❌ Could not identify this account\'s row (missing id). Check console — the app_users table may be missing/misnaming its id column.');
-                return;
-            }
             if (!confirm(`Delete account "${u.username}"? This cannot be undone.`)) return;
-            const { error } = await _supabase.from(USERS_TABLE).delete().eq('id', u.id);
+            const { error } = await _supabase.from(USERS_TABLE).delete().eq('username', u.username);
             if (error) {
                 alert(`❌ Failed to delete account: ${error.message}`);
                 return;
@@ -3603,14 +3598,6 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     return;
                 }
 
-                if (userMgmtIsEditMode && (userMgmtEditingId === undefined || userMgmtEditingId === null)) {
-                    // Editing mode was entered but the underlying row has no id — this would
-                    // silently fail (or worse, update the wrong row). Surface it instead.
-                    console.error('[userMgmt save] userMgmtEditingId is missing while in edit mode. userMgmtCache:', userMgmtCache);
-                    errEl.textContent = '⚠️ Could not identify this account\'s row (missing id). Check console — the app_users table may be missing/misnaming its id column.';
-                    return;
-                }
-
                 if (!userMgmtIsEditMode && !password) { errEl.textContent = '⚠️ Password is required for a new account.'; return; }
 
                 saveBtn.disabled = true;
@@ -3623,7 +3610,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                             allowed_tabs: selectedTabs.length > 0 ? selectedTabs : null
                         };
                         if (password) payload.password = password;
-                        const { error } = await _supabase.from(USERS_TABLE).update(payload).eq('id', userMgmtEditingId);
+                        const { error } = await _supabase.from(USERS_TABLE).update(payload).eq('username', userMgmtEditingUsernameKey);
                         if (error) { errEl.textContent = `❌ ${error.message}`; return; }
                     } else {
                         const payload = {

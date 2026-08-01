@@ -3740,11 +3740,25 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         let taskAreaFilterValue = '';
         let taskStatusFilterValue = '';
 
-        // "YYYY-MM-DD HH:mm:ss" in local time — sortable & easily re-parsed.
+        // "YYYY-MM-DD HH:mm:ss" in Asia/Manila wall-clock time — sortable & easily
+        // re-parsed. Deliberately forces the PH timezone (rather than using the
+        // device's own local time) so stamps stay consistent no matter what
+        // timezone the browser/OS is set to. This must stay in sync with
+        // getPHNowAsNaiveDate() below, which the Daily Checkpoint Report uses to
+        // read these same stamps back — if the two ever disagree on timezone,
+        // records silently land in the wrong checkpoint bucket or even the wrong
+        // report date.
         function nowStampLocal() {
-            const d = new Date();
-            const pad = n => String(n).padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            const fmt = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Manila',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            });
+            const parts = {};
+            fmt.formatToParts(new Date()).forEach(p => { if (p.type !== 'literal') parts[p.type] = p.value; });
+            if (parts.hour === '24') parts.hour = '00'; // some engines report midnight as 24
+            return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
         }
 
         function normalizeDateKey(str) {

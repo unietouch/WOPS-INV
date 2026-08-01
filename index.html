@@ -594,44 +594,6 @@
                         </div>
                     </div>
 
-                    <!-- Task Timestamp Edit Modal [Admin Only] -->
-                    <div id="taskTimeEditModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-center justify-center p-4">
-                        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-sm">
-                            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                                <h3 id="taskTimeEditModalTitle" class="text-sm font-bold text-slate-900 dark:text-white">🛠️ Edit Timestamp</h3>
-                                <button id="taskTimeEditModalCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
-                            </div>
-                            <div class="p-5 space-y-3">
-                                <p id="taskTimeEditModalDesc" class="text-[11px] text-slate-400 dark:text-slate-500">Admin override — manually set the recorded date &amp; time for this checkpoint. Clearing the field and saving will un-tick the checkbox.</p>
-                                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Date &amp; Time</label>
-                                <input type="datetime-local" id="taskTimeEditInput" step="1" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div class="flex justify-between gap-2 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
-                                <button id="taskTimeEditClearBtn" class="text-red-500 hover:text-red-600 text-xs font-bold px-3 py-2 rounded-lg transition">Clear</button>
-                                <div class="flex gap-2">
-                                    <button id="taskTimeEditCancelBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg transition">Cancel</button>
-                                    <button id="taskTimeEditSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition">Save</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Task Full Record Edit Modal [Admin Only] -->
-                    <div id="taskRowEditModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-center justify-center p-4">
-                        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-                            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                                <h3 id="taskRowEditModalTitle" class="text-sm font-bold text-slate-900 dark:text-white">🛠️ Edit Record</h3>
-                                <button id="taskRowEditModalCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
-                            </div>
-                            <p class="px-5 pt-3 text-[11px] text-slate-400 dark:text-slate-500">Admin override — every field on this record can be corrected here, including the Date, Time Printed and Time Task Done.</p>
-                            <div id="taskRowEditFields" class="p-5 space-y-3 overflow-y-auto"></div>
-                            <div class="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
-                                <button id="taskRowEditCancelBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg transition">Cancel</button>
-                                <button id="taskRowEditSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition">Save Changes</button>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- 3B: Open Active Gaps Summary Panel -->
                     <div id="reportSectionGaps" class="hidden bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <div class="mb-4">
@@ -979,6 +941,51 @@
                 </div>
 
             </main>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         TASK TIMESTAMP EDIT MODAL [Admin Only]
+         (Moved out of the Report tab-content — a hidden ancestor was
+         preventing this from ever becoming visible on other tabs.)
+         ============================================================ -->
+    <div id="taskTimeEditModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-sm">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 id="taskTimeEditModalTitle" class="text-sm font-bold text-slate-900 dark:text-white">🛠️ Edit Timestamp</h3>
+                <button id="taskTimeEditModalCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
+            </div>
+            <div class="p-5 space-y-3">
+                <p id="taskTimeEditModalDesc" class="text-[11px] text-slate-400 dark:text-slate-500">Admin override — manually set the recorded date &amp; time for this checkpoint. Clearing the field and saving will un-tick the checkbox.</p>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Date &amp; Time</label>
+                <input type="datetime-local" id="taskTimeEditInput" step="1" class="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex justify-between gap-2 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                <button id="taskTimeEditClearBtn" class="text-red-500 hover:text-red-600 text-xs font-bold px-3 py-2 rounded-lg transition">Clear</button>
+                <div class="flex gap-2">
+                    <button id="taskTimeEditCancelBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg transition">Cancel</button>
+                    <button id="taskTimeEditSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         TASK FULL RECORD EDIT MODAL [Admin Only]
+         (Same fix — moved out of the Report tab-content.)
+         ============================================================ -->
+    <div id="taskRowEditModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 id="taskRowEditModalTitle" class="text-sm font-bold text-slate-900 dark:text-white">🛠️ Edit Record</h3>
+                <button id="taskRowEditModalCloseBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none">&times;</button>
+            </div>
+            <p class="px-5 pt-3 text-[11px] text-slate-400 dark:text-slate-500">Admin override — every field on this record can be corrected here, including the Date, Time Printed and Time Task Done.</p>
+            <div id="taskRowEditFields" class="p-5 space-y-3 overflow-y-auto"></div>
+            <div class="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+                <button id="taskRowEditCancelBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-4 py-2 rounded-lg transition">Cancel</button>
+                <button id="taskRowEditSaveBtn" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition">Save Changes</button>
+            </div>
         </div>
     </div>
 

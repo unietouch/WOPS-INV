@@ -3845,6 +3845,15 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 });
                 if (type === 'storage') applyStorageAreaMap(obj, 'storage');
                 if (type === 'picking') applyStorageAreaMap(obj, 'destination');
+
+                // Uploaded/pasted rows are auto-marked Printed with a timestamp,
+                // unless the paste itself already carried an explicit PRINTED value
+                // (in which case we respect what was pasted instead of overriding it).
+                if ('printed' in obj && (obj.printed === null || obj.printed === undefined || obj.printed === '')) {
+                    obj.printed = 'YES';
+                    obj.time_printed = nowStampLocal();
+                }
+
                 rows.push(obj);
             });
 

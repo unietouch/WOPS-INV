@@ -3849,9 +3849,18 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 // Uploaded/pasted rows are auto-marked Printed with a timestamp,
                 // unless the paste itself already carried an explicit PRINTED value
                 // (in which case we respect what was pasted instead of overriding it).
-                if ('printed' in obj && (obj.printed === null || obj.printed === undefined || obj.printed === '')) {
-                    obj.printed = 'YES';
-                    obj.time_printed = nowStampLocal();
+                // Either way, if the row ends up Printed but has no usable
+                // time_printed (e.g. paste had a PRINTED column but no TIME PRINTED
+                // column), stamp it now — a Printed row with no timestamp is
+                // invisible to the Daily Checkpoint Report even though it still
+                // shows up as pending on the Live Checklist.
+                if ('printed' in obj) {
+                    if (obj.printed === null || obj.printed === undefined || obj.printed === '') {
+                        obj.printed = 'YES';
+                        obj.time_printed = nowStampLocal();
+                    } else if (isChecked(obj.printed) && !obj.time_printed) {
+                        obj.time_printed = nowStampLocal();
+                    }
                 }
 
                 rows.push(obj);

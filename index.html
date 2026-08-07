@@ -4780,9 +4780,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             let storageRows, pickingRows, reservedRows;
             try {
                 [storageRows, pickingRows, reservedRows] = await Promise.all([
-                    fetchAllRowsChecked('task_storage', 'area,printed,time_printed,task,time_task_done'),
-                    fetchAllRowsChecked('task_picking', 'area,printed,time_printed,task,time_task_done'),
-                    fetchAllRowsChecked('task_reserved', 'area,printed,time_printed,task,time_task_done')
+                    fetchAllRowsChecked('task_storage', 'area,printed,time_printed,task,time_task_done,created_on'),
+                    fetchAllRowsChecked('task_picking', 'area,printed,time_printed,task,time_task_done,posting_date'),
+                    fetchAllRowsChecked('task_reserved', 'area,printed,time_printed,task,time_task_done,activity_date')
                 ]);
             } catch (err) {
                 console.error('generateCheckpointReport failed:', err);
@@ -4790,7 +4790,16 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 alert(`❌ Failed to build checkpoint report:\n${err.message}\n\nThis usually means the "area" column doesn't exist yet on one of the task tables.`);
                 return;
             }
-            const combined = [...storageRows, ...pickingRows, ...reservedRows];
+            // Legacy rows created before Printed/Task Done stamping existed can have
+            // printed = YES but time_printed = null — those used to vanish from this
+            // report entirely (Printed AND Pending both undercounted) even though they
+            // still show up as Pending on the Live Checklist. fallbackDate carries each
+            // row's own date field so parseStampDate below can recover a usable date.
+            const combined = [
+                ...storageRows.map(r => ({ ...r, fallbackDate: r.created_on })),
+                ...pickingRows.map(r => ({ ...r, fallbackDate: r.posting_date })),
+                ...reservedRows.map(r => ({ ...r, fallbackDate: r.activity_date }))
+            ];
 
             const [ry, rm, rd] = reportDateStr.split('-').map(n => parseInt(n, 10));
 
@@ -4813,8 +4822,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
             combined.forEach(r => {
                 const area = (r.area || 'UNASSIGNED').trim() || 'UNASSIGNED';
-                const printedDate = isChecked(r.printed) ? parseStampDate(r.time_printed) : null;
-                const doneDate = isChecked(r.task) ? parseStampDate(r.time_task_done) : null;
+                const printedDate = isChecked(r.printed) ? (parseStampDate(r.time_printed) || parseStampDate(r.fallbackDate)) : null;
+                const doneDate = isChecked(r.task) ? (parseStampDate(r.time_task_done) || parseStampDate(r.fallbackDate)) : null;
 
                 // "Printed" / "Done" columns — only activity that happened ON the report date.
                 if (printedDate && sameCalendarDay(printedDate, ry, rm, rd)) {

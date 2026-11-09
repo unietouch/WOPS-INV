@@ -352,15 +352,11 @@
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Customer Filter</label>
-                                <select id="ledgerFilterCustomer" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-40 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">All Customers</option>
-                                </select>
+                                <input type="text" id="ledgerFilterCustomer" placeholder="Customer name..." autocomplete="off" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Material Filter</label>
-                                <select id="ledgerFilterMaterial" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-44 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">All Materials</option>
-                                </select>
+                                <input type="text" id="ledgerFilterMaterial" placeholder="Material code or description..." autocomplete="off" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs rounded-lg px-3 py-2 w-48 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Status Filter</label>
@@ -1632,23 +1628,9 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             }
         }
 
-        function populateLedgerFilterDropdowns() {
-            const customerSelect = document.getElementById('ledgerFilterCustomer');
-            const materialSelect = document.getElementById('ledgerFilterMaterial');
-            if (!customerSelect || !materialSelect) return;
-
-            const prevCustomerVal = customerSelect.value;
-            const prevMaterialVal = materialSelect.value;
-
-            customerSelect.innerHTML = '<option value="">All Customers</option>' +
-                allCustomers.map(c => `<option value="${escapeHtml(c.customer_name)}">${escapeHtml(c.customer_name)}</option>`).join('');
-
-            materialSelect.innerHTML = '<option value="">All Materials</option>' +
-                allMaterials.map(m => `<option value="${escapeHtml(m.material_code)}">${escapeHtml(m.material_code)} — ${escapeHtml(m.material_description || '')}</option>`).join('');
-
-            if ([...customerSelect.options].some(o => o.value === prevCustomerVal)) customerSelect.value = prevCustomerVal;
-            if ([...materialSelect.options].some(o => o.value === prevMaterialVal)) materialSelect.value = prevMaterialVal;
-        }
+        // The ledger Customer / Material filters are now free-text inputs (like the
+        // Search box), so there are no dropdown options to populate any more.
+        function populateLedgerFilterDropdowns() {}
 
         async function refreshAllLocalLedgerTables() {
             renderMaterialsMasterTable();
@@ -2191,8 +2173,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
         async function loadAllReservationsLedger() {
             const tbody = document.getElementById('ledgerTableBody');
             const searchVal = document.getElementById('ledgerSearchInput').value.trim();
-            const customerVal = document.getElementById('ledgerFilterCustomer').value;
-            const materialVal = document.getElementById('ledgerFilterMaterial').value;
+            const customerVal = document.getElementById('ledgerFilterCustomer').value.trim();
+            const materialVal = document.getElementById('ledgerFilterMaterial').value.trim();
             const statusVal = document.getElementById('ledgerFilterStatus').value;
             tbody.innerHTML = `<tr><td colspan="13" class="px-3 py-6 text-center text-slate-400 italic">Streaming live operational databases records...</td></tr>`;
 
@@ -2202,10 +2184,16 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                 query = query.or(`sales_order.ilike.%${searchVal}%,picklist.ilike.%${searchVal}%,customer_name.ilike.%${searchVal}%`);
             }
             if (customerVal) {
-                query = query.eq('customer_name', customerVal);
+                // Partial, case-insensitive match (free text)
+                query = query.ilike('customer_name', `%${customerVal}%`);
             }
             if (materialVal) {
-                query = query.eq('material_code', materialVal);
+                // Partial match on material code OR description. Commas/parentheses
+                // would break PostgREST's or() syntax, so strip them from the term.
+                const safeMat = materialVal.replace(/[,()]/g, ' ').trim();
+                if (safeMat) {
+                    query = query.or(`material_code.ilike.%${safeMat}%,material_description.ilike.%${safeMat}%`);
+                }
             }
             if (statusVal) {
                 query = query.eq('status', statusVal);
@@ -2469,8 +2457,8 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
             document.getElementById('exportDeliveredBtn').addEventListener('click', () => exportRecordsByStatus('DELIVERED', 'exportDeliveredBtn'));
             document.getElementById('ledgerSearchInput').addEventListener('input', debounce(() => { ledgerPage = 0; loadAllReservationsLedger(); }, 300));
 
-            document.getElementById('ledgerFilterCustomer').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
-            document.getElementById('ledgerFilterMaterial').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
+            document.getElementById('ledgerFilterCustomer').addEventListener('input', debounce(() => { ledgerPage = 0; loadAllReservationsLedger(); }, 300));
+            document.getElementById('ledgerFilterMaterial').addEventListener('input', debounce(() => { ledgerPage = 0; loadAllReservationsLedger(); }, 300));
             document.getElementById('ledgerFilterStatus').addEventListener('change', () => { ledgerPage = 0; loadAllReservationsLedger(); });
 
             document.getElementById('ledgerPageSizeSelect').addEventListener('change', (e) => {

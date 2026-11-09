@@ -2240,6 +2240,67 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
 
         function invalidateFefoViolationCache() { fefoViolationCache.ts = 0; }
 
+        // Ledger FEFO rule (stricter than the Report tab's, to avoid false reds):
+        //  - Only compares orders of the SAME customer + SAME material.
+        //  - Orders are sequenced by Required Delivery Date (RDD).
+        //  - A row is a violation only if the NEXT order in that sequence (the next
+        //    strictly later RDD) was given a batch that expires EARLIER than this row's
+        //    batch — i.e. the newer stock went out first. Same-RDD orders are never
+        //    compared with each other, and a single later inversion no longer paints
+        //    every earlier row red.
+        //  - Same-day/rush rows (RDD = entry date) are skipped, as in the Report.
+        function evaluateLedgerFefoViolations(records) {
+            const violations = [];
+            const groups = {};
+            const dayMs = 1000 * 60 * 60 * 24;
+
+            records.forEach(r => {
+                if (!r.material_code || !r.customer_name) return;
+                const rdd = r.required_delivery_date ? new Date(r.required_delivery_date) : null;
+                const exp = parseAnyDate(r.expiration_date);
+                if (!rdd || isNaN(rdd.getTime()) || !exp || isNaN(exp.getTime())) return;
+                const key = `${r.customer_name.trim().toUpperCase()}|||${r.material_code.trim().toUpperCase()}`;
+                (groups[key] = groups[key] || []).push({ r, rdd: rdd.getTime(), exp });
+            });
+
+            Object.values(groups).forEach(list => {
+                list.sort((a, b) => (a.rdd - b.rdd) || ((a.r.id || 0) - (b.r.id || 0)));
+
+                // Bucket into distinct-RDD steps, in order.
+                const steps = [];
+                list.forEach(item => {
+                    const last = steps[steps.length - 1];
+                    if (last && last.rdd === item.rdd) last.items.push(item);
+                    else steps.push({ rdd: item.rdd, items: [item] });
+                });
+
+                for (let k = 0; k < steps.length - 1; k++) {
+                    // Earliest-expiring batch handed out in the next RDD step
+                    const nextEarliest = steps[k + 1].items.reduce((m, it) => (it.exp < m.exp ? it : m));
+                    steps[k].items.forEach(cur => {
+                        // Same-day/rush check done with plain date strings (the file has two
+                        // different sameCalendarDay() helpers, so don't rely on either one).
+                        const entry = cur.r.date_of_entry ? new Date(cur.r.date_of_entry) : null;
+                        if (entry && !isNaN(entry.getTime())) {
+                            const entryKey = `${entry.getFullYear()}-${String(entry.getMonth() + 1).padStart(2, '0')}-${String(entry.getDate()).padStart(2, '0')}`;
+                            if (String(cur.r.required_delivery_date).slice(0, 10) === entryKey) return;
+                        }
+                        if (cur.exp > nextEarliest.exp && cur.r.batch_code !== nextEarliest.r.batch_code) {
+                            violations.push({
+                                id: `${cur.r.id}_${nextEarliest.r.id}`,
+                                material_code: cur.r.material_code,
+                                desc: cur.r.material_description || '',
+                                violator: cur.r,
+                                bypassed: nextEarliest.r,
+                                gapDays: Math.round((cur.exp - nextEarliest.exp) / dayMs)
+                            });
+                        }
+                    });
+                }
+            });
+            return violations;
+        }
+
         async function ensureFefoViolationMap() {
             const fresh = (Date.now() - fefoViolationCache.ts) < FEFO_CACHE_TTL_MS;
             if (fresh) return fefoViolationCache.map;
@@ -2258,7 +2319,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     if (!data || data.length < limit) hasMore = false; else start += limit;
                 }
                 const map = new Map();
-                evaluateDatabaseFEFOViolations(all).forEach(v => {
+                evaluateLedgerFefoViolations(all).forEach(v => {
                     // First violation found per served record is enough for the row highlight.
                     if (!map.has(v.violator.id)) map.set(v.violator.id, v);
                 });
@@ -2447,7 +2508,7 @@ UNDELIVERED	6051538424" class="w-full bg-slate-50 dark:bg-slate-800 border borde
                     ? "bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 border-b border-red-200 dark:border-red-900/50 transition duration-150"
                     : "hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 transition duration-150";
                 if (fefoViolation) {
-                    tr.title = `FEFO violation (by RDD): this batch (${fefoViolation.violator.batch_code}, exp ${fefoViolation.violator.expiration_date}) was served ahead of batch ${fefoViolation.bypassed.batch_code} (exp ${fefoViolation.bypassed.expiration_date}, RDD ${fefoViolation.bypassed.required_delivery_date}) which expires ${fefoViolation.gapDays} day(s) earlier.`;
+                    tr.title = `FEFO violation (same customer & material, by RDD): this order (RDD ${fefoViolation.violator.required_delivery_date}) got batch ${fefoViolation.violator.batch_code} (exp ${fefoViolation.violator.expiration_date}), but the next order (RDD ${fefoViolation.bypassed.required_delivery_date}) got batch ${fefoViolation.bypassed.batch_code} (exp ${fefoViolation.bypassed.expiration_date}), which expires ${fefoViolation.gapDays} day(s) earlier.`;
                 }
                 tr.dataset.id = item.id;
 
